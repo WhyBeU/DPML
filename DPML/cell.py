@@ -1,5 +1,7 @@
 from semiconductor.recombination import SRH
 from DPML.Nostdstreams import NoStdStreams
+import scipy.constants as const
+import numpy as np
 
 class cell():
     #****   Constant declaration    ****#
