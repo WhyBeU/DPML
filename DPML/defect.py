@@ -1,3 +1,5 @@
+import numpy as np
+
 class defect():
     #****   Constant declaration    ****#
     Etbound = 0.6       #   Absolute bound for Defect level
