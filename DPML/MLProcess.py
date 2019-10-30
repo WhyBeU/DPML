@@ -33,6 +33,7 @@ for i in range(1):  #   [CELL]  Imports
     from sklearn import metrics
     from sklearn.metrics import confusion_matrix
     from sklearn.model_selection import RandomizedSearchCV, cross_validate
+    from DPML.logger import Logger
 
 class MLProcess():
 
