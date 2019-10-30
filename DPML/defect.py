@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 class defect():
     #****   Constant declaration    ****#
