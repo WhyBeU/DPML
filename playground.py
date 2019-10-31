@@ -182,3 +182,309 @@ df = pd.DataFrame(Save)
 df.columns = columns_name
 #outputpath = MLProcess.WORKDIR +"data\\"+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")+"_SRH-data_N-%s_T-%s_Dn-%spts_type-%s_Ndop-%.0E.csv" %(N,Trange,len(dnrange),type,Ndop)
 #df.to_csv(outputpath, encoding='utf-8', index=False)
+
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#****** Experimental prediction pipeline
+#/////////////////////////////////////////////////////////////////////
+datafile=MLProcess.WORKDIR +"data\\"+"2019-05-27-12-58_SRH-data_N-100000_T-[227.29999999999998, 251.79999999999998, 275.79999999999995, 301.4, 320.5, 344.29999999999995, 367.9, 391.29999999999995]_Dn-100pts_type-n_Ndop-5E+15.csv"
+data = MLProcess.loadData(datafile, normalize = True)
+loaded_scaler = MLProcess.SCALER
+
+#   Bypass reload of data
+MLProcess.SCALER = loaded_scaler
+MLProcess.DATAFILE = datafile
+MLProcess.NORMALIZE = True
+
+#   Machine learning training
+for i in range(1):
+    subsetSize = 1000
+    SAVE = False
+    pipeline ={
+        "Random Forest": RandomForestRegressor(n_estimators=100, verbose =2),
+        "Ada Boost linear": AdaBoostRegressor(base_estimator = DecisionTreeRegressor(), n_estimators=100, loss='linear'),
+        "Gradient Boost ls": GradientBoostingRegressor(verbose=2,loss='ls',max_depth=10),
+        "Neural Network relu": MLPRegressor((100,100),alpha=0.001, activation = 'relu',verbose=2,learning_rate='adaptive'),
+    }
+    Exp_transform = MLProcess.SCALER["data"].transform([np.log10(Exp_feature)])
+
+    Etp_results = {}
+    for key in pipeline:
+        Process = MLProcess(model=pipeline[key], name=key, save=SAVE)
+        Process.initTraining()
+        X,Y = Process.prepData(data, predictColumn="Et_eV", subsetSize=subsetSize, BG=1)
+        Process.trainModel(X,Y)
+        Process.regResults[0]['Etp_pred'] = MLProcess.SCALER["Et_eV"].inverse_transform([Process.model.predict(Exp_transform)])[0][0]
+        Etp_results[key] = Process.regResults[0]
+
+    resultsTab=[]
+    title=[]
+    for key,dics in Etp_results.items():
+        if not resultsTab: title.append("Model")
+        line=[]
+        line.append(key)
+        for k,v in dics.items():
+            if not resultsTab: title.append(k)
+            line.append(v)
+        resultsTab.append(line)
+    resEtp = pd.DataFrame(resultsTab)
+    resEtp.columns=title
+    resEtp.to_csv(MLProcess.WORKDIR+"2019-08-22_Etp_exp_results_2.csv",encoding='utf-8', index=False)
+
+
+    Etm_results = {}
+    for key in pipeline:
+        Process = MLProcess(model=pipeline[key], name=key, save=SAVE)
+        Process.initTraining()
+        X,Y = Process.prepData(data, predictColumn="Et_eV", subsetSize=subsetSize, BG=0)
+        Process.trainModel(X,Y)
+        Process.regResults[0]['Etm_pred'] = MLProcess.SCALER["Et_eV"].inverse_transform([Process.model.predict(Exp_transform)])[0][0]
+        Etm_results[key] = Process.regResults[0]
+
+    resultsTab=[]
+    title=[]
+    for key,dics in Etm_results.items():
+        if not resultsTab: title.append("Model")
+        line=[]
+        line.append(key)
+        for k,v in dics.items():
+            if not resultsTab: title.append(k)
+            line.append(v)
+        resultsTab.append(line)
+    resEtm = pd.DataFrame(resultsTab)
+    resEtm.columns=title
+    resEtm.to_csv(MLProcess.WORKDIR+"2019-08-22_Etm_exp_results_2.csv",encoding='utf-8', index=False)
+
+
+    k_results = {}
+    for key in pipeline:
+        Process = MLProcess(model=pipeline[key], name=key, save=SAVE)
+        Process.initTraining()
+        X,Y = Process.prepData(data, predictColumn="k", subsetSize=subsetSize, BG=None)
+        Process.trainModel(X,Y)
+        Process.regResults[0]['k_pred'] = np.power(10,MLProcess.SCALER["k"].inverse_transform([Process.model.predict(Exp_transform)]))[0][0]
+        k_results[key] = Process.regResults[0]
+
+    resultsTab=[]
+    title=[]
+    for key,dics in k_results.items():
+        if not resultsTab: title.append("Model")
+        line=[]
+        line.append(key)
+        for k,v in dics.items():
+            if not resultsTab: title.append(k)
+            line.append(v)
+        resultsTab.append(line)
+    resk = pd.DataFrame(resultsTab)
+    resk.columns=title
+    resk.to_csv(MLProcess.WORKDIR+"2019-08-22_k_exp_results_2.csv",encoding='utf-8', index=False)
+
+
+    pipeline ={
+        "Random Forest Classification": RandomForestClassifier(n_estimators=100, verbose =2),
+        "Ada Boost Classification": AdaBoostClassifier(base_estimator = DecisionTreeClassifier(), n_estimators=100),
+        "Gradient Boost Classification": GradientBoostingClassifier(verbose=2,loss='deviance'),
+        "Neural Network relu": MLPClassifier((100,100),alpha=0.001, activation = 'relu',verbose=2,learning_rate='adaptive'),
+        "5-neighbors classifier":KNeighborsClassifier(n_neighbors = 5, weights='distance'),
+    }
+
+    BG_results = {}
+    for key in pipeline:
+        Process = MLProcess(model=pipeline[key], name=key, save=SAVE)
+        Process.initTraining()
+        X,Y = Process.prepData(data, predictColumn="BG", subsetSize=subsetSize, BG=None)
+        Process.trainModel(X,Y)
+        Process.regResults[0]['BG_pred'] = (Process.model.predict(Exp_transform)[0],Process.model.predict_proba(Exp_transform)[0])
+        BG_results[key] = Process.regResults[0]
+
+    resultsTab=[]
+    title=[]
+    for key,dics in BG_results.items():
+        if not resultsTab: title.append("Model")
+        line=[]
+        line.append(key)
+        for k,v in dics.items():
+            if not resultsTab: title.append(k)
+            line.append(v)
+        resultsTab.append(line)
+    resBG = pd.DataFrame(resultsTab)
+    resBG.columns=title
+    resBG.to_csv(MLProcess.WORKDIR+"2019-08-22_BG_exp_results_2.csv",encoding='utf-8', index=False)
+
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#****** DPSS
+#/////////////////////////////////////////////////////////////////////
+
+dref = defect(0.285,1E-14,1E-14)
+cref = cell(300, type='n', Ndop=5.1e15)
+#Trange = [200,250,300,350,400]
+Trange_exp_C = [-45.85,-21.35,2.65,28.25,47.35,71.15,94.75,118.15]
+Trange_exp_K = [273.15+T for T in Trange_exp_C]
+Trange = Trange_exp_K
+cdb = [cref.changeT(T) for T in Trange]
+dnrange=np.logspace(13,17,100)
+sdb = [simulation(c,dref,dnrange,noise="logNorm", noiseparam=0.01) for c in cdb]
+Etrange=np.arange(-0.55,0.56,0.01)
+DPSS_Taun0 =[]
+DPSS_k = []
+for s in sdb:
+    X = [1/(s.cell.n0+s.cell.p0+dn) for dn in dnrange]
+    slope,intercept,_,_,_ = linregress(X,s.tauSRH_noise)
+    dpss_Taun0 = [(slope-intercept*(s.cell.ni*np.exp(Et/(s.cell.kb*s.cell.T))-s.cell.p0))/(s.cell.ni*np.exp(-Et/(s.cell.kb*s.cell.T))+s.cell.p0-s.cell.ni*np.exp(Et/(s.cell.kb*s.cell.T))-s.cell.n0) for Et in Etrange]
+    dpss_k = [s.cell.Vp/s.cell.Vn*(intercept/taun0-1) for taun0 in dpss_Taun0]
+    DPSS_Taun0.append(dpss_Taun0)
+    DPSS_k.append(dpss_k)
+
+
+#   Predict back
+for i in range(1):
+    datafile = "C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\04-Experimental data -ML\\ML\\data\\2019-09-17-14-28_SRH-data_N-100000_T-[227.29999999999998, 251.79999999999998, 275.79999999999995, 301.4, 320.5, 344.29999999999995, 367.9, 391.29999999999995]_Dn-100pts_type-n_Ndop-5E+15.csv"
+    data = MLProcess.loadData(datafile, normalize = True)
+    loaded_scaler = MLProcess.SCALER
+
+    EtScaler = preprocessing.MinMaxScaler()
+    EtScaler.scale_=[0.90920781]
+    EtScaler.min_ =[0.50006353]
+    EtScaler.data_min_ = [-0.54999916]
+    EtScaler.data_max_ = [0.5498594]
+    EtScaler.data_range_ = [1.09985857]
+
+    kScaler = preprocessing.MinMaxScaler()
+    kScaler.scale_=[0.12530088]
+    kScaler.min_ =[0.50037123]
+    kScaler.data_min_ = [-3.99335779]
+    kScaler.data_max_ = [3.98743241]
+    kScaler.data_range_ = [7.9807902]
+
+    dataScaler = loaded_scaler['data']
+
+pipelineEtm ={
+    "Random Forest": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_18-38__model_Random Forest_1_.sav"),
+    "Ada Boost": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_18-44__model_Ada Boost linear_1_.sav"),
+    "Gradient Boost": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_19-24__model_Gradient Boost ls_1_.sav"),
+    "Neural Network": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_19-51__model_Neural Network relu_1_.sav"),
+}
+pipelineEtp ={
+    "Random Forest": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_17-22__model_Random Forest_1_.sav"),
+    "Ada Boost": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_17-26__model_Ada Boost linear_1_.sav"),
+    "Gradient Boost": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_18-10__model_Gradient Boost ls_1_.sav"),
+    "Neural Network": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_18-37__model_Neural Network relu_1_.sav"),
+}
+pipelinek ={
+    "Random Forest": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_14-31__model_Random Forest_1_.sav"),
+    "Ada Boost": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_14-39__model_Ada Boost linear_1_.sav"),
+    "Gradient Boost": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_16-08__model_Gradient Boost ls_1_.sav"),
+    "Neural Network": joblib.load(MLProcess.WORKDIR+"models\\2019-09-17_17-19__model_Neural Network relu_1_.sav"),
+}
+pipelineBG ={
+    "Random Forest": joblib.load(MLProcess.WORKDIR+"models\\2019-08-26_19-33__model_Random Forest Classification_1_.sav"),
+    "Ada Boost": joblib.load(MLProcess.WORKDIR+"models\\2019-08-26_19-38__model_Ada Boost Classification_1_.sav"),
+    "Gradient Boost": joblib.load(MLProcess.WORKDIR+"models\\2019-08-26_19-40__model_Gradient Boost Classification_1_.sav"),
+    "Neural Network": joblib.load(MLProcess.WORKDIR+"models\\2019-08-26_19-46__model_Neural Network relu_1_.sav"),
+}
+
+feature = [[t for s in sdb for t in s.tauSRH_noise]]
+feature = dataScaler.transform(np.log10(feature))
+res={}
+for modelP,modelM in zip(pipelineEtm,pipelineEtp):
+    res[modelP]={'Et':[EtScaler.inverse_transform([pipelineEtm[modelM].predict(feature)])[0][0],EtScaler.inverse_transform([pipelineEtp[modelP].predict(feature)])[0][0]]}
+for model in pipelinek:
+    res[model]['k']=[np.power(10,kScaler.inverse_transform([pipelinek[model].predict(feature)]))[0][0]]*2
+for model in pipelineBG:
+    res[model]['BG']=pipelineBG[model].predict_proba(feature)[0]
+
+
+for i in range(1):  #   [CELL]  Plot DPSS curve
+    fig, (ax2) = plt.subplots(figsize=(6,6))
+    for k,T,c in zip(DPSS_k,Trange,plt.cm.viridis(np.linspace(0.1,0.9,len(Trange)))):
+        ax2.plot(Etrange,k,label="T=%.0F K"%(T),c=c,alpha=0.5)
+    markers =['o','v','s','D']
+    colors =['b','r','green','brown']
+    for key,m,c in zip(res,markers,colors):
+        if res[key]['BG'][0]>res[key]['BG'][1]:
+            pred=" +"
+            prob = " %.2F"%(res[key]['BG'][0])
+        else:
+            pred=" -"
+            prob = " %.2F"%(res[key]['BG'][1])
+        ax2.errorbar(res[key]['Et'],res[key]['k'],xerr=[0,0],yerr=[0,0],
+        marker=m,
+        c=c,
+        ms=5,
+        alpha=0.8,
+        linewidth=0,
+        label=key+pred+prob
+        )
+    ax2.semilogy()
+    ax2.set_xlabel('Defect energy level $\it{E_t}$ (eV)')
+    ax2.set_ylabel('Capture cross-section ratio $\it{k}$')
+    ax2.set_ylim(ymin=1e-1, ymax=1e1)
+    ax2.set_xlim(xmin=-0.55, xmax=0.55)
+    ax2.grid(which='minor',linewidth=0)
+    ax2.grid(which='major',linewidth=0)
+    ax2.locator_params(axis='x',nbins=6)
+    ax2.tick_params(axis='x',direction='in', which='both',top=True)
+    ax2.tick_params(axis='y',direction='in', which='both',right=True)
+    ax2.minorticks_on()
+    ax2.set_axisbelow(True)
+    ax2.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    plt.show()
+
+#   Find Et with MRL minimization method
+def minEtfunc(Et,sdb):
+    Equation ={
+        "A":[],
+        "B":[],
+        "L":[],
+        "E":[],
+    }
+    for s in sdb:
+        X = [1/(s.cell.n0+s.cell.p0+dn) for dn in dnrange]
+        slope,intercept,_,_,_ = linregress(X,s.tauSRH_noise)
+        Equation['A'].append(slope)
+        Equation['B'].append(intercept)
+        Equation['L'].append([1/s.cell.Vn,1/s.cell.Vp])
+        Equation['E'].append([(s.cell.ni*np.exp(-Et/(s.cell.kb*s.cell.T))-s.cell.n0)/s.cell.Vn,(s.cell.ni*np.exp(Et/(s.cell.kb*s.cell.T))-s.cell.p0)/s.cell.Vp])
+    return Equation
+
+custom_sdb=[]
+
+for key,c in zip(Trange_keys,Cell_exp):
+    s = simulation(c,defect(0,1E-13,1E-13),dnrange)
+    s.tauSRH_noise = Exp[key]["Tau_calc"]
+    custom_sdb.append(s)
+Etrange=np.arange(-0.55,0.551,0.001)
+Norm_names = [np.inf,-np.inf,1,-1,2,-2]
+Norms = {}
+Norm_min = {}
+for s in Norm_names: Norms[str(s)]=[]
+for s in Norm_names: Norm_min[str(s)]=[np.inf,0]
+for Et in Etrange:
+    Equation=minEtfunc(Et,custom_sdb)
+    norm = Equation['E'] @ np.linalg.pinv(Equation['L']) @ Equation['B'] - Equation['A']
+    for n in Norm_names:
+        eq_norm = np.linalg.norm(norm,n)
+        if eq_norm < Norm_min[str(n)][0]: Norm_min[str(n)]=[eq_norm,Et]
+        Norms[str(n)].append(eq_norm)
+
+
+for i in range(1):  #   [CELL]  Plot minimization curve
+    fig, (ax2) = plt.subplots(figsize=(6,6))
+
+    for n,c in zip(Norms,plt.cm.viridis(np.linspace(0.1,0.9,len(Norms)))):
+        ax2.plot(Etrange,Norms[n], label="Norm %s - minEt = %.3F eV [%.2E]"%(n,Norm_min[n][1],Norm_min[n][0]), c=c)
+
+    ax2.semilogy()
+    ax2.set_xlabel('Defect energy level $\it{E_t}$ (eV)')
+    ax2.set_ylabel('Normal equation norm')
+    #ax2.set_ylim(ymin=1e-1, ymax=1e1)
+    ax2.set_xlim(xmin=-0.55, xmax=0.55)
+    ax2.grid(which='minor',linewidth=0)
+    ax2.grid(which='major',linewidth=0)
+    ax2.locator_params(axis='x',nbins=6)
+    ax2.tick_params(axis='x',direction='in', which='both',top=True)
+    ax2.tick_params(axis='y',direction='in', which='both',right=True)
+    ax2.minorticks_on()
+    ax2.set_axisbelow(True)
+    ax2.legend(bbox_to_anchor=(0.5, -.15), loc="upper center", borderaxespad=0.)
+    plt.show()
+    
