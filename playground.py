@@ -448,16 +448,17 @@ def minEtfunc(Et,sdb):
 
 custom_sdb=[]
 
-for key,c in zip(Trange_keys,Cell_exp):
+for key,c in zip(Trange,Cell_exp):
     s = simulation(c,defect(0,1E-13,1E-13),dnrange)
     s.tauSRH_noise = Exp[key]["Tau_calc"]
     custom_sdb.append(s)
 Etrange=np.arange(-0.55,0.551,0.001)
-Norm_names = [np.inf,-np.inf,1,-1,2,-2]
+Norm_names = [np.inf,-np.inf]
 Norms = {}
 Norm_min = {}
 for s in Norm_names: Norms[str(s)]=[]
 for s in Norm_names: Norm_min[str(s)]=[np.inf,0]
+custom_sdb=sdb['D-0454']
 for Et in Etrange:
     Equation=minEtfunc(Et,custom_sdb)
     norm = Equation['E'] @ np.linalg.pinv(Equation['L']) @ Equation['B'] - Equation['A']
@@ -487,4 +488,142 @@ for i in range(1):  #   [CELL]  Plot minimization curve
     ax2.set_axisbelow(True)
     ax2.legend(bbox_to_anchor=(0.5, -.15), loc="upper center", borderaxespad=0.)
     plt.show()
-    
+
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#****** Noise accuracy of DPSS/MRL/ML
+#/////////////////////////////////////////////////////////////////////
+MLProcess.WORKDIR="C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\03-ML-prediction\\2019-T1\\2019-04-12_MLProcess\\"
+
+#   Load Scaler
+for i in range(1):
+    datafileBG = "C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\03-ML-prediction\\2019-T1\\2019-02-21_DPML algorithms comparison\\data\\2019-03-22-12-20_SRH-data_N-500000_T-[200, 250, 300, 350, 400]_Dn-100pts_type-p_Ndop-1E+15.csv"
+    dataBG = MLProcess.loadData(datafileBG, normalize = True)
+    BG_EtScaler = MLProcess.SCALER['Et_eV']
+    BG_kScaler = MLProcess.SCALER['k']
+    BG_dataScaler = MLProcess.SCALER['data']
+
+#   Load Models
+
+ML = joblib.load(MLProcess.WORKDIR+"models\\2019-04-26_18-21__model_Neural Network relu_4_.sav")
+
+#   Generate random noise dataset
+N=10000
+ddb = defect.random_db(N,Et_min = -0.55, Et_max = 0.55, S_min = 1e-17, S_max = 1e-13, Nt = 1e12)
+Trange = [200,250,300,350,400]
+dnrange=np.logspace(13,17,100)
+Etrange=np.arange(-0.55,0.551,0.001)
+cref = cell(300, type='p', Ndop=1e15)
+cdb = [cref.changeT(T) for T in Trange]
+noiseparam=0.01
+sdb = {}
+for d in ddb:
+    sdb[d.name]=[simulation(c,d,dnrange,noise="logNorm", noiseparam=noiseparam) for c in cdb]
+def minEtfunc(Et,sdb):
+    Equation ={
+        "A":[],
+        "B":[],
+        "L":[],
+        "E":[],
+    }
+    for s in sdb:
+        X = [1/(s.cell.n0+s.cell.p0+dn) for dn in dnrange]
+        slope,intercept,_,_,_ = linregress(X,s.tauSRH_noise)
+        Equation['A'].append(slope)
+        Equation['B'].append(intercept)
+        Equation['L'].append([1/s.cell.Vn,1/s.cell.Vp])
+        Equation['E'].append([(s.cell.ni*np.exp(-Et/(s.cell.kb*s.cell.T))-s.cell.n0)/s.cell.Vn,(s.cell.ni*np.exp(Et/(s.cell.kb*s.cell.T))-s.cell.p0)/s.cell.Vp])
+    return Equation
+
+Result = {}
+for key,simu in sdb.items():
+    Result[key]= {'Actual': 0 if simu[0].defect.Et<0 else 1 }
+
+    #   DPSS solver
+    DPSS_Taun0 =[]
+    DPSS_k = []
+    for s in simu:
+        X = [1/(s.cell.n0+s.cell.p0+dn) for dn in dnrange]
+        slope,intercept,_,_,_ = linregress(X,s.tauSRH_noise)
+        dpss_Taun0 = [(slope-intercept*(s.cell.ni*np.exp(Et/(s.cell.kb*s.cell.T))-s.cell.p0))/(s.cell.ni*np.exp(-Et/(s.cell.kb*s.cell.T))+s.cell.p0-s.cell.ni*np.exp(Et/(s.cell.kb*s.cell.T))-s.cell.n0) for Et in Etrange]
+        dpss_k = [s.cell.Vp/s.cell.Vn*(intercept/taun0-1) for taun0 in dpss_Taun0]
+        dpss_k = np.array(dpss_k)
+        dpss_k[dpss_k<0]='NaN'
+        DPSS_Taun0.append(dpss_Taun0)
+        DPSS_k.append(dpss_k)
+    err_k_tab=[]
+    for i in range(len(Etrange)):
+        err_k = []
+        for j in range(len(Trange)):
+            err_k.append(DPSS_k[j][i])
+        err_k_tab.append(err_k)
+    DPSS_L = []
+    DPSS_minEt = [-0.55,np.infty]
+    for i in range(len(Etrange)):
+        mean = np.nanmean(err_k_tab[i])
+        min = np.nanmin(err_k_tab[i])
+        max = np.nanmax(err_k_tab[i])
+        l = np.log(max/min)
+        if l ==0: l = 'NaN'
+        DPSS_L.append(l)
+        if l =='NaN': continue
+        if l< DPSS_minEt[1]:
+            DPSS_minEt[0]=Etrange[i]
+            DPSS_minEt[1]=l
+    Result[key]['DPSS']= 0 if DPSS_minEt[0]<0 else 1
+    # ML
+    extractfeature = [[t for s in simu for t in s.tauSRH_noise]]
+    featureBG = BG_dataScaler.transform(np.log10(extractfeature))
+    Result[key]['ML']= ML.predict(featureBG)[0]
+    # MRL inf
+    Norm_inf_min=np.inf
+    Norm_Et_min = -0.55
+    for Et in Etrange:
+        Equation=minEtfunc(Et,simu)
+        norm = Equation['E'] @ np.linalg.pinv(Equation['L']) @ Equation['B'] - Equation['A']
+        eq_norm = np.linalg.norm(norm,np.inf)
+        if eq_norm< Norm_inf_min:
+            Norm_inf_min = eq_norm
+            Norm_Et_min = Et
+    Result[key]['MRL']= 0 if Norm_Et_min<0 else 1
+
+column_names = ["Et","k","Actual","DPSS","ML","MRL"]
+line=[]
+for key in Result:
+    line.append((sdb[key][0].defect.Et,sdb[key][0].defect.k,Result[key]['Actual'],Result[key]['DPSS'],Result[key]['ML'],Result[key]['MRL']))
+df = pd.DataFrame(line)
+df.columns = column_names
+df.to_csv("C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\05-ML-noise\\"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")+"DPSS-ML-MRL-comparison-10000.csv",encoding='utf-8', index=False)
+
+FigDF.describe()
+FigDF = pd.read_csv("C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\05-ML-noise\\2019-11-20-10-21DPSS-ML-MRL-comparison-10000.csv", index_col=None)
+FigDF['Correct DPSS']= [ 1 if dpss==actual else 0 for dpss,actual in zip(FigDF.DPSS,FigDF.Actual)]
+FigDF['Correct MRL']= [ 1 if mrl==actual else 0 for mrl,actual in zip(FigDF.MRL,FigDF.Actual)]
+FigDF['Correct ML']= [ 1 if nl==actual else 0 for nl,actual in zip(FigDF.ML,FigDF.Actual)]
+
+for i in range(1):  #   [CELL]  Plot
+    fig = plt.figure(figsize=(6,4.5))
+    #plt.title("Defect energy level variation lifetime curve",fontsize=16)
+    ax1 = plt.gca()
+    ax1.set_xlabel('Defect energy level $\it{E_t}$ (eV)')
+    ax1.set_ylabel('Capture cross-section ratio $\it{k}$')
+    #ax1.annotate("$\it{T} =$ 400 K",xy=(0.05,0.9),xycoords='axes fraction', fontsize=14)
+    ax1.scatter(FigDF.Et,FigDF.k,c=FigDF['Correct MRL'],marker=".",alpha=1,s=9)
+    # ax1.plot([-0.55,0.55],[0.83,0.83],"k--")
+    ax1.semilogy()
+    ax1.set_xlim(xmin=-0.55,xmax=0.55)
+    ax1.set_ylim(ymin=0.0001,ymax=10000)
+    ax1.grid(which='minor',linewidth=0)
+    ax1.grid(which='major',linewidth=0)
+    ax1.minorticks_on()
+    ax1.locator_params(axis='x',nbins=7)
+    ax1.tick_params(axis='x',direction='in', which='both',top=True)
+    ax1.tick_params(axis='y',direction='in', which='both',right=True)
+    ax1.set_axisbelow(True)
+    # #ax1.set_facecolor('#F2F2F2')
+    # divider = make_axes_locatable(ax1)
+    # cax1 = divider.append_axes("right", size="5%", pad="1%")
+    # s=Fraction(0.3,AxesX(cax1))
+    # cbar=fig.colorbar(sc, ax=ax1)
+    # cbar.set_label("Correct label prediction probability")
+    #cbar.set_ticks([0.2,0.49,1])
+    plt.show()
