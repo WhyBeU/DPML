@@ -559,46 +559,54 @@ for key,simu in sdb.items():
     DPSS_L = []
     DPSS_minEt = [-0.55,np.infty]
     for i in range(len(Etrange)):
-        mean = np.nanmean(err_k_tab[i])
-        min = np.nanmin(err_k_tab[i])
-        max = np.nanmax(err_k_tab[i])
-        l = np.log(max/min)
-        if l ==0: l = 'NaN'
-        DPSS_L.append(l)
-        if l =='NaN': continue
-        if l< DPSS_minEt[1]:
-            DPSS_minEt[0]=Etrange[i]
-            DPSS_minEt[1]=l
+        line = err_k_tab[i]
+
+        if np.isnan(line).any():
+            DPSS_L.append(np.nan)
+        else:
+            l=np.nanstd(line)/np.nanmean(line)
+            DPSS_L.append(l)
+            if l< DPSS_minEt[1]:
+                DPSS_minEt[0]=Etrange[i]
+                DPSS_minEt[1]=l
+
+
     Result[key]['DPSS']= 0 if DPSS_minEt[0]<0 else 1
     # ML
     extractfeature = [[t for s in simu for t in s.tauSRH_noise]]
     featureBG = BG_dataScaler.transform(np.log10(extractfeature))
     Result[key]['ML']= ML.predict(featureBG)[0]
     # MRL inf
-    Norm_inf_min=np.inf
-    Norm_Et_min = -0.55
-    for Et in Etrange:
-        Equation=minEtfunc(Et,simu)
-        norm = Equation['E'] @ np.linalg.pinv(Equation['L']) @ Equation['B'] - Equation['A']
-        eq_norm = np.linalg.norm(norm,np.inf)
-        if eq_norm< Norm_inf_min:
-            Norm_inf_min = eq_norm
-            Norm_Et_min = Et
-    Result[key]['MRL']= 0 if Norm_Et_min<0 else 1
+    # Norm_inf_min=np.inf
+    # Norm_Et_min = -0.55
+    # for Et in Etrange:
+    #     Equation=minEtfunc(Et,simu)
+    #     norm = Equation['E'] @ np.linalg.pinv(Equation['L']) @ Equation['B'] - Equation['A']
+    #     eq_norm = np.linalg.norm(norm,np.inf)
+    #     if eq_norm< Norm_inf_min:
+    #         Norm_inf_min = eq_norm
+    #         Norm_Et_min = Et
+    # Result[key]['MRL']= 0 if Norm_Et_min<0 else 1
 
-column_names = ["Et","k","Actual","DPSS","ML","MRL"]
+
+column_names = ["Et","k","Actual","DPSS","ML"]
 line=[]
 for key in Result:
-    line.append((sdb[key][0].defect.Et,sdb[key][0].defect.k,Result[key]['Actual'],Result[key]['DPSS'],Result[key]['ML'],Result[key]['MRL']))
+    line.append((sdb[key][0].defect.Et,sdb[key][0].defect.k,Result[key]['Actual'],Result[key]['DPSS'],Result[key]['ML']))
 df = pd.DataFrame(line)
 df.columns = column_names
 df.to_csv("C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\05-ML-noise\\"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")+"DPSS-ML-MRL-comparison-10000.csv",encoding='utf-8', index=False)
 
-FigDF.describe()
+FigDF=df
 FigDF = pd.read_csv("C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\05-ML-noise\\2019-11-20-10-21DPSS-ML-MRL-comparison-10000.csv", index_col=None)
 FigDF['Correct DPSS']= [ 1 if dpss==actual else 0 for dpss,actual in zip(FigDF.DPSS,FigDF.Actual)]
 FigDF['Correct MRL']= [ 1 if mrl==actual else 0 for mrl,actual in zip(FigDF.MRL,FigDF.Actual)]
 FigDF['Correct ML']= [ 1 if nl==actual else 0 for nl,actual in zip(FigDF.ML,FigDF.Actual)]
+
+DPSS_correct = FigDF['Correct DPSS'].sum()/len(FigDF)
+ML_correct = FigDF['Correct ML'].sum()/len(FigDF)
+
+print(ML_correct,DPSS_correct)
 
 for i in range(1):  #   [CELL]  Plot
     fig = plt.figure(figsize=(6,4.5))
@@ -607,7 +615,7 @@ for i in range(1):  #   [CELL]  Plot
     ax1.set_xlabel('Defect energy level $\it{E_t}$ (eV)')
     ax1.set_ylabel('Capture cross-section ratio $\it{k}$')
     #ax1.annotate("$\it{T} =$ 400 K",xy=(0.05,0.9),xycoords='axes fraction', fontsize=14)
-    ax1.scatter(FigDF.Et,FigDF.k,c=FigDF['Correct MRL'],marker=".",alpha=1,s=9)
+    ax1.scatter(FigDF.Et,FigDF.k,c=FigDF['Correct ML'],marker=".",alpha=1,s=9)
     # ax1.plot([-0.55,0.55],[0.83,0.83],"k--")
     ax1.semilogy()
     ax1.set_xlim(xmin=-0.55,xmax=0.55)
