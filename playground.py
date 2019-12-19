@@ -605,8 +605,9 @@ FigDF['Correct ML']= [ 1 if nl==actual else 0 for nl,actual in zip(FigDF.ML,FigD
 
 DPSS_correct = FigDF['Correct DPSS'].sum()/len(FigDF)
 ML_correct = FigDF['Correct ML'].sum()/len(FigDF)
+MRL_correct = FigDF['Correct MRL'].sum()/len(FigDF)
 
-print(ML_correct,DPSS_correct)
+print(ML_correct,DPSS_correct, MRL_correct)
 
 for i in range(1):  #   [CELL]  Plot
     fig = plt.figure(figsize=(6,4.5))
