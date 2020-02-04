@@ -1,0 +1,21 @@
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#-------  TO DO
+#///////////////////////////////////////////
+
+
+
+
+
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#-------  IDEAS
+#///////////////////////////////////////////
+
+Using fastai for sorting half-bandgap location on T/Dn images
+Need to normalize the images to Tau_n0
+Need to plot log of lifetime
+
+Apply on database of defect
+pictures of the map with or wihtout interpolation
+--> Gramian Angular Field
+
+Deployment of application - either with python script. Check Sparrow
