@@ -1,19 +1,24 @@
+"Cell related functions"
 from semiconductor.recombination import SRH
-from DPML.Nostdstreams import NoStdStreams
+from ..utils import NoStdStreams
 import scipy.constants as const
 import numpy as np
 import warnings
 
 
-class cell():
+class Cell():
     #****   Constant declaration    ****#
     kb = const.physical_constants['Boltzmann constant in eV/K'][0]
-    Tmin =75
-    Tmax =400
+    Tmin = 75
+    Tmax = 400
+    Ndopmin = 1e10
+    Ndopmax = 1e20
     DefaultNdop = 1E15
     DefaultType = "p"
+    DefaultT=300
+
     #****   Method declaration      ****#
-    def __init__(self,T,Ndop=None,type=None,):
+    def __init__(self,T=None,Ndop=None,type=None,):
         '''
         ---Doc---
             Description:
@@ -40,25 +45,36 @@ class cell():
                 object  represents defined cell
 
             Exemple:
-                >>  cell(300, Ndop = 1E15, type="p")
+                >>  Cell(T=300, Ndop = 1E15, type="p")
         '''
-        if Ndop is None: Ndop = cell.DefaultNdop
-        if type is None: type = cell.DefaultType
-        self.Ndop = Ndop
+        if Ndop is None: Ndop = Cell.DefaultNdop
+        if type is None: type = Cell.DefaultType
+        if T is None: T = Cell.DefaultT
+
+        #   Check dopping range
+        if Ndop<Cell.Ndopmin:
+            self.Ndop = Cell.Ndopmin
+            warnings.warn("In Cell.__init__ : Ndop value out of bound, got %s, and expected within [%s,%s]. Et will be clipped to %s." %(Ndop,Cell.Ndopmin,Cell.Ndopmax,Cell.Ndopmin))
+        elif Ndop>Cell.Ndopmax:
+            self.Ndop = Cell.Ndopmax
+            warnings.warn("In Cell.__init__ : Ndop value out of bound, got %s, and expected within [%s,%s]. Et will be clipped to %s." %(Ndop,Cell.Ndopmin,Cell.Ndopmax,Cell.Ndopmax))
+        else:
+            self.Ndop = Ndop
+
         #   Check temperature range
-        if T<cell.Tmin:
-            self.T = cell.Tmin
-            warnings.warn("In cell.__init__ : T value out of bound, got %s, and expected within [%s,%s]. Et will be clipped to %s." %(T,cell.Tmin,cell.Tmax,cell.Tmin))
-        elif T>cell.Tmax:
-            self.T = cell.Tmax
-            warnings.warn("In cell.__init__ : T value out of bound, got %s, and expected within [%s,%s]. Et will be clipped to %s." %(T,cell.Tmin,cell.Tmax,cell.Tmax))
+        if T<Cell.Tmin:
+            self.T = Cell.Tmin
+            warnings.warn("In Cell.__init__ : T value out of bound, got %s, and expected within [%s,%s]. Et will be clipped to %s." %(T,Cell.Tmin,Cell.Tmax,Cell.Tmin))
+        elif T>Cell.Tmax:
+            self.T = Cell.Tmax
+            warnings.warn("In Cell.__init__ : T value out of bound, got %s, and expected within [%s,%s]. Et will be clipped to %s." %(T,Cell.Tmin,Cell.Tmax,Cell.Tmax))
         else:
             self.T = T
 
         #   Check type validity
         if type not in ["p","n"]:
-            warnings.warn("In cell.__init__ : Incorrect type value, expected n or p. Value will be defaulted to %s"%(cell.DefaultType))
-            self.type = cell.DefaultType
+            warnings.warn("In Cell.__init__ : Incorrect type value, expected n or p. Value will be defaulted to %s"%(Cell.DefaultType))
+            self.type = Cell.DefaultType
         else:
             self.type = type
 
@@ -89,26 +105,22 @@ class cell():
                 object  represents defined cell
 
             Exemple:
-                >>  cell2 = cell(300, Ndop = 1E15, type="p").changeT(350)
+                >>  cell2 = Cell(T = 300, Ndop = 1E15, type="p").changeT(350)
         '''
-        return cell(T,self.Ndop,self.type)
-    def print_self(self):
+        return Cell(T,self.Ndop,self.type)
+    def changeNdop(self,T):
         '''
         ---Doc---
             Description:
-                Prints to the console the values stored in the object.
+                Create a new cell instance, based on the same parameters as .self except for the new inputted doping.
 
             Inputs:
-                None
+                Ndop       Float       Doping level of the sample
 
             Outputs:
-                None
+                object  represents defined cell
 
             Exemple:
-                >>  mydefect.print_self()
+                >>  cell2 = Cell(T = 300, Ndop = 1e15, type="p").changeNdop(1e16)
         '''
-        for attr in dir(self):
-            if not attr.startswith("__"):
-                value = getattr(self, attr)
-                if not callable(value):
-                    print(str(attr)+" : "+str(value))
+        return Cell(T,self.Ndop,self.type)
