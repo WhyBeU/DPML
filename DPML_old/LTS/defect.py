@@ -1,6 +1,8 @@
 import numpy as np
 import warnings
 
+__all__ = ['defect']
+
 class defect():
     #****   Constant declaration    ****#
     Etbound = 0.6       #   Absolute bound for Defect level
