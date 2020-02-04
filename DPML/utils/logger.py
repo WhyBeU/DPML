@@ -1,3 +1,4 @@
+"Write to a log file everything passed to print()"
 import sys
 class Logger():
     """Write to a log file everything passed to print().
