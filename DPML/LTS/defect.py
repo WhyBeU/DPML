@@ -1,14 +1,14 @@
+'Defect parameters and generation functions'
 import numpy as np
 import warnings
 
-__all__ = ['defect']
-
-class defect():
+class Defect():
     #****   Constant declaration    ****#
     Etbound = 0.6       #   Absolute bound for Defect level
     Sminbound = 1E-18   #   Absolute minimum bound for Capture Cross Section
     Smaxbound = 1E-12   #   Absolute maximum bound for Capture Cross Section
     DefaultNt = 1E12    #   Default value for defect density if none is provided
+
     #****   Method declaration      ****#
     def __init__(self,Et,Sn,Sp,Nt=None, name=""):
         '''
@@ -31,7 +31,7 @@ class defect():
                 object  represents defined defect
 
             Exemple:
-                >>  mydefect=defect(0.33,1E-14,3E-15, 1E12)
+                >>  mydefect=Defect(0.33,1E-14,3E-15, 1E12)
         '''
         if Nt is None : Nt = defect.DefaultNt
         if Et<-defect.Etbound:
@@ -66,26 +66,6 @@ class defect():
         self.Ap=1/(Sp*Nt)
         self.k=Sn/Sp
         self.name=name
-    def print_self(self):
-        '''
-        ---Doc---
-            Description:
-                Prints to the console the values stored in the object.
-
-            Inputs:
-                None
-
-            Outputs:
-                None
-
-            Exemple:
-                >>  mydefect.print_self()
-        '''
-        for attr in dir(self):
-            if not attr.startswith("__"):
-                value = getattr(self, attr)
-                if not callable(value):
-                    print(str(attr)+" : "+str(value))
     def random_db(N,Et_min = None, Et_max = None, S_min = None, S_max = None, Nt = None):
         '''
         ---Doc---
@@ -101,7 +81,7 @@ class defect():
             Outputs:
                 Res         array       Database of defects
             Exemple:
-                >>  defect.random_db(100)
+                >>  Defect.random_db(100)
         '''
         #   If values are not define, then default thermal
         if Et_min is None: Et_min = - defect.Etbound
@@ -114,6 +94,6 @@ class defect():
             Et = np.random.rand(1)[0]*(Et_max-Et_min)+Et_min
             Sn = np.exp(np.random.rand(1)[0]*(np.log(S_max)-np.log(S_min))+np.log(S_min))
             Sp= np.exp(np.random.rand(1)[0]*(np.log(S_max)-np.log(S_min))+np.log(S_min))
-            d = defect(Et, Sn, Sp, Nt=Nt,name="D-"+str(i).zfill(1+int(np.trunc(np.log10(N))))) #    Will display leading '0' for naming ordering purposes
+            d = Defect(Et, Sn, Sp, Nt=Nt,name="D-"+str(i).zfill(1+int(np.trunc(np.log10(N))))) #    Will display leading '0' for naming ordering purposes
             Res.append(d)
         return Res
