@@ -108,7 +108,7 @@ class Cell():
                 >>  cell2 = Cell(T = 300, Ndop = 1E15, type="p").changeT(350)
         '''
         return Cell(T,self.Ndop,self.type)
-    def changeNdop(self,T):
+    def changeNdop(self,Ndop):
         '''
         ---Doc---
             Description:
@@ -123,4 +123,4 @@ class Cell():
             Exemple:
                 >>  cell2 = Cell(T = 300, Ndop = 1e15, type="p").changeNdop(1e16)
         '''
-        return Cell(T,self.Ndop,self.type)
+        return Cell(self.T,Ndop,self.type)

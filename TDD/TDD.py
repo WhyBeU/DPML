@@ -7,18 +7,32 @@
 #---    Initialization
 #///////////////////////////////////////////
 # %%--  Imports
-import DPML
 from DPML import *
-import DPML as d
+import numpy as np
 # %%-
 
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-#---    Test function
+#---    Class functionalities and definition
 #///////////////////////////////////////////
 # %%--  Class functionalities and definition
-defect.defect.random_db(100,Et_min = -0.55, Et_max = 0.55, S_min = 1E-17, S_max = 1E-13, Nt = None)
-dir()
-pyDPML.__builtins__
+def checkCell():
+    print("Test - Cell class")
+    cell = Cell()
+    T = np.random.randint(low = Cell.Tmin, high=Cell.Tmax)
+    if cell.changeT(T).T!=T: print("Cell.changeT error")
+    Ndop = np.exp(np.random.randint(low = np.log(Cell.Ndopmin), high=np.log(Cell.Ndopmax)))
+    if cell.changeNdop(Ndop).Ndop!=Ndop: print("Cell.changeNdop error")
+    print("Test complete")
+def checkDefect():
+    print("Test - Defect class")
+    N = np.random.randint(100)
+    db = Defect.random_db(N)
+    if len(db)!=N: print("Defect.random_db error")
+    print("Test complete")
+# %%-
 
-d.defect.random_db
+# %%--  Run test function
+checkCell()
+checkDefect()
+
 # %%-
