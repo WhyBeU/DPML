@@ -29,10 +29,19 @@ def checkDefect():
     db = Defect.random_db(N)
     if len(db)!=N: print("Defect.random_db error")
     print("Test complete")
+def checkLTS():
+    print("Test - LTS class")
+    dnrange=np.logspace(13,17,50)
+    d=Defect(Et=0.45,Sn=1e-14,Sp=1e-15)
+    c=Cell()
+    lts = LTS(c,d,dnrange,noise="", noiseparam=0)
+    tausrh = lts.tauSRH
+    breakAuger,tauAuger = lts.checkAuger()
+    print("Test complete")
 # %%-
 
 # %%--  Run test function
 checkCell()
 checkDefect()
-
+checkLTS()
 # %%-

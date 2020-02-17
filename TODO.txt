@@ -19,3 +19,5 @@ pictures of the map with or wihtout interpolation
 --> Gramian Angular Field
 
 Deployment of application - either with python script. Check Sparrow
+
+Disparity with Yan data might come from ni being ni_eff in cell definition
