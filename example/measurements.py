@@ -3,9 +3,12 @@
 %autoreload 2
 import os
 import pandas as pd
-
+import datetime
+dir()
 exp.__dict__
-
+datetime.datetime.now()
+plt.plot([0,1],[0,1])
+import matplotlib.pyplot as plt
 # %%-
 
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -43,9 +46,6 @@ PARAMETERS = {
     'save': False,   # True to save a copy of the printed log, the outputed model and data
     'n_defects': 100, # Size of simulated defect data set for machine learning
     'dn_range' : np.logspace(13,17,10),# Number of points to interpolate the curves on
-    'do_plot_SRH' : True, # Compute and show SRH lifetime curves
-    'do_Plot_ML' : True, # Show ML training plot for the 6 regression and the classification
-    'do_Plot_DPSS' : True, # Compute and show DPSS curve and ML prediction
 }
 # %%-
 
@@ -53,9 +53,10 @@ PARAMETERS = {
 #---    Script
 #///////////////////////////////////////////
 # %%--
-exp = Experiment(SaveDir=SAVEDIR, Parameters=PARAMETERS)
+exp = Experiment(SaveDir=SAVEDIR)
 exp.loadCSV(FilePath=FILEPATH,Temperature=TEMPERATURE,Doping=DOPING, Type=WAFERTYPE)
-exp.interpolateSRH(DnRange=Dn_Range)
+exp.interpolateSRH()
+exp.plotSRH()
 exp.prepDB(N=N_Defects)
 exp.trainML()   # probably need to separate classification and regression
 exp.evaluate()
