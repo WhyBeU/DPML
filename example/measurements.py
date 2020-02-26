@@ -43,8 +43,9 @@ WAFERTYPE = 'n'
 # %%-
 # %%--  Hyper-parameters
 PARAMETERS = {
-    'save': False,   # True to save a copy of the printed log, the outputed model and data
-    'n_defects': 100, # Size of simulated defect data set for machine learning
+    'name': 'Example github test',
+    'save': True,   # True to save a copy of the printed log, the outputed model and data
+    'n_defects': 10000, # Size of simulated defect data set for machine learning
     'dn_range' : np.logspace(13,17,10),# Number of points to interpolate the curves on
 }
 # %%-
@@ -54,14 +55,15 @@ PARAMETERS = {
 #///////////////////////////////////////////
 # %%--
 exp = Experiment(SaveDir=SAVEDIR)
+exp = Experiment(SaveDir=SAVEDIR, Parameters=PARAMETERS)
 exp.loadCSV(FilePath=FILEPATH,Temperature=TEMPERATURE,Doping=DOPING, Type=WAFERTYPE)
 exp.interpolateSRH()
 exp.plotSRH()
-exp.prepDB(N=N_Defects)
+exp.generateDB()
+exp.saveExp()
+
+exp = Experiment.loadExp(SAVEDIR+"objects\\")
 exp.trainML()   # probably need to separate classification and regression
 exp.evaluate()
-exp.plotSRH(DoPlot = Do_Plot_SRH)
-exp.plotML(DoPlot = Do_Plot_ML)
-exp.plotDPSS(DoPlot = Do_Plot_DPSS)
 exp.save()
 # %%-
