@@ -1,6 +1,7 @@
 "Experimental main functions"
 from ..si import Cell,Defect,LTS
 from ..utils.matplotlibstyle import *
+from ..utils import SaveObj, LoadObj
 import numpy as np
 import os
 import warnings
@@ -8,7 +9,7 @@ import pandas as pd
 import datetime
 import matplotlib.pyplot as plt
 import warnings
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 
 
 class Experiment():
@@ -18,6 +19,15 @@ class Experiment():
         'save': False,  # True to save a copy of the printed log, the outputed model and data
         'n_defects': 100, # Size of simulated defect data set for machine learning
         'dn_range' : np.logspace(13,17,10),# Number of points to interpolate the curves on
+        'Et_min':-0.55,  #   Minimum energy level
+        'Et_max':0.55,  #   maximum energy level
+        'S_min':1E-18,   #   minimum capture cross section
+        'S_max':1E-12,  #   maximum capture cross section
+        'Nt':1E12,  #   maximum energy level
+        'noise_model':"",  #   Type of noise in SRH generation
+        'noise_parameter':0, #Parameter used to vary noise level from noise model
+        'check_auger':True,     #   Check if lifetime generation should be below Auger limit
+
     }
 
     #****   Method declaration      ****#
@@ -41,6 +51,59 @@ class Experiment():
         self.parameters = Experiment.DefaultParameters
         self.logbook = {'created': datetime.datetime.now().strftime('"%d-%m-%Y %H:%M:%S"')}
         if Parameters is not None: self.updateParameters(Parameters)
+    def generateDB(self):
+        # Generate Random defect database
+        defectDB=Defect.randomDB(
+            N=self.parameters['n_defects'],
+            Et_min = self.parameters['Et_min'],
+            Et_max = self.parameters['Et_max'],
+            S_min = self.parameters['S_min'],
+            S_max = self.parameters['S_max'],
+            Nt = self.parameters['Nt']
+        )
+
+        # Calculate cell level characteristic for temperature,doping
+        cref = Cell(T=300,Ndop=1E15,type=self.parameters['type'])
+        cellDB = [cref.changeT(T).changeNdop(Ndop) for (T,Ndop) in zip(self.parameters['temperature'],self.parameters['doping'])]
+
+        # Calculate lifetime on database and check for Auger limit
+        columns_name = ["Name","Et_eV","Sn_cm2","Sp_cm2",'k']
+        ltsDB=[]
+        firstPass = True
+        noiseparam = 0
+        for d in defectDB:
+            col = [d.name,d.Et,d.Sn,d.Sp,d.k]
+            skipDefect = False
+            for c in cellDB:
+                if skipDefect: continue
+                s = LTS(c,d,self.parameters['dn_range'],noise=self.parameters['noise_model'], noiseparam=self.parameters['noise_parameter'])
+                if self.parameters['check_auger']:  #if break auger limit, discard defect
+                    breakAuger,_ = s.checkAuger()
+                    if breakAuger: skipDefect=True
+                if skipDefect: continue
+                for t,dn in zip(s.tauSRH_noise,s.dnrange):
+                    if firstPass: columns_name.append("%sK_%.1Ecm-3_ %.0Ecm-3" % (c.T,c.Ndop,dn))
+                    col.append(t)
+            if not skipDefect: ltsDB.append(col)
+            if not skipDefect: firstPass = False
+            if skipDefect:  # if we skipped a defect, add a new random one to have n_defects in the database at the end
+                defectDB.append(Defect.randomDB(
+                        N=1,
+                        Et_min = self.parameters['Et_min'],
+                        Et_max = self.parameters['Et_max'],
+                        S_min = self.parameters['S_min'],
+                        S_max = self.parameters['S_max'],
+                        Nt = self.parameters['Nt']
+                        )[0])
+        ltsDF = pd.DataFrame(ltsDB)
+        ltsDF.columns = columns_name
+        self.updateParameters({'lifetime_database': ltsDF})
+        if self.parameters['save']:
+            SaveObj(ltsDF,self.pathDic['objects'],'ltsDF_'+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+            self.updateLogbook('lifetime_database_saved')
+
+        #   Log change
+        self.updateLogbook('lifetime_database_generated')
     def interpolateSRH(self):
         #   Check applicability of method
 
@@ -85,6 +148,46 @@ class Experiment():
         self.updateParameters(changedParameter)
         #   Log change
         self.updateLogbook('csv_loaded')
+    def loadExp(path,filename=None):
+        if filename != None:
+            exp = LoadObj(path,filename)
+            exp.updateLogbook('Experiment_loaded_'+filename)
+            return(exp)
+        else:   # if no filename provided, take the latest one, if none exists, raise error.
+            current_timestamp = datetime.datetime(1990, 10, 24, 16, 00, 00)
+            for file in os.scandir(path):
+                if not file.is_file(): continue
+                if 'experimentObj' in file.name:
+                    timestamp = datetime.datetime.strptime(file.name.split("_")[-1].split(".")[0],"%Y-%m-%d-%H-%M-%S")
+                    if timestamp > current_timestamp:
+                        filename = file.name
+                        current_timestamp=timestamp
+            if filename != None:
+                exp = LoadObj(path,filename)
+                exp.updateLogbook('Experiment_loaded_'+filename)
+                return(exp)
+            else:
+                raise ValueError("No experimental file exists in %s"%(path))
+    def loadLTS(self, filename=None):
+        if filename != None:
+            ltsDF = LoadObj(self.pathDic['objects'],filename)
+            self.updateLogbook('ltsDB_loaded_'+filename)
+            self.updateParameters({'lifetime_database': ltsDF})
+        else:   # if no filename provided, take the latest one, if none exists, raise error.
+            current_timestamp = datetime.datetime(1990, 10, 24, 16, 00, 00)
+            for file in os.scandir(self.pathDic['objects']):
+                if not file.is_file(): continue
+                if 'ltsDF' in file.name:
+                    timestamp = datetime.datetime.strptime(file.name.split("_")[-1].split(".")[0],"%Y-%m-%d-%H-%M-%S")
+                    if timestamp > current_timestamp:
+                        filename = file.name
+                        current_timestamp=timestamp
+            if filename != None:
+                ltsDF = LoadObj(self.pathDic['objects'],filename)
+                self.updateLogbook('lifetime_database_loaded_'+filename)
+                self.updateParameters({'lifetime_database': ltsDF})
+            else:
+                raise ValueError("No ltsDF file exists in %s"%(self.pathDic['objects']))
     def plotSRH(self,toPlot=None, plotParameters=None):
         #   Check applicability of method
         if toPlot==None:
@@ -132,6 +235,9 @@ class Experiment():
         ax.loglog()
         plt.show()
         if plotParam['save']: plt.savefig(self.pathDic['figures']+"plotSRH"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+self.parameters['name']+".png",transparent=True,bbox_inches='tight')
+    def saveExp(self, name=""):
+        self.updateLogbook('Experiment_saved_'+name)
+        SaveObj(self,self.pathDic['objects'],'experimentObj_'+name+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     def updateParameters(self,Parameters):
         for key,value in Parameters.items():
             self.parameters[key]=value
