@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import warnings
 # warnings.filterwarnings("ignore")
 
-
 class Experiment():
     #****   Constant declaration    ****#
     DefaultParameters = {
@@ -27,7 +26,6 @@ class Experiment():
         'noise_model':"",  #   Type of noise in SRH generation
         'noise_parameter':0, #Parameter used to vary noise level from noise model
         'check_auger':True,     #   Check if lifetime generation should be below Auger limit
-
     }
 
     #****   Method declaration      ****#
