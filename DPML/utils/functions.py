@@ -1,4 +1,5 @@
 "Get attributes and print all attributes"
+import pickle
 
 def PrintSelf(obj):
     for attr in dir(obj):
