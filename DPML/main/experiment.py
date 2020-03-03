@@ -12,7 +12,7 @@ import warnings
 # warnings.filterwarnings("ignore")
 
 class Experiment():
-    #****   Constant declaration    ****#
+    #****   constant declaration    ****#
     DefaultParameters = {
         'name':"",  # string added to every saved file for reference
         'save': False,  # True to save a copy of the printed log, the outputed model and data
@@ -28,7 +28,7 @@ class Experiment():
         'check_auger':True,     #   Check if lifetime generation should be below Auger limit
     }
 
-    #****   Method declaration      ****#
+    #****   general methods     ****#
     def __init__(self,SaveDir,Parameters=None):
         #   Check applicability of method
         if not os.path.exists(SaveDir): raise ValueError('%s does not exists'%(SaveDir))
@@ -48,7 +48,36 @@ class Experiment():
         #   define hyper parameters for experiment
         self.parameters = Experiment.DefaultParameters
         self.logbook = {'created': datetime.datetime.now().strftime('"%d-%m-%Y %H:%M:%S"')}
+        self.logDataset = None
+        self.logML = None
         if Parameters is not None: self.updateParameters(Parameters)
+    def loadExp(path,filename=None):
+        if filename != None:
+            exp = LoadObj(path,filename)
+            exp.updateLogbook('Experiment_loaded_'+filename)
+            return(exp)
+        else:   # if no filename provided, take the latest one, if none exists, raise error.
+            current_timestamp = datetime.datetime(1990, 10, 24, 16, 00, 00)
+            for file in os.scandir(path):
+                if not file.is_file(): continue
+                if 'experimentObj' in file.name:
+                    timestamp = datetime.datetime.strptime(file.name.split("_")[-1].split(".")[0],"%Y-%m-%d-%H-%M-%S")
+                    if timestamp > current_timestamp:
+                        filename = file.name
+                        current_timestamp=timestamp
+            if filename != None:
+                exp = LoadObj(path,filename)
+                exp.updateLogbook('Experiment_loaded_'+filename)
+                return(exp)
+            else:
+                raise ValueError("No experimental file exists in %s"%(path))
+    def saveExp(self, name=""):
+        self.updateLogbook('Experiment_saved_'+name)
+        SaveObj(self,self.pathDic['objects'],'experimentObj_'+name+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+
+    #****   machine learning methods     ****#
+
+    #****   simulation methods     ****#
     def generateDB(self):
         # Generate Random defect database
         defectDB=Defect.randomDB(
@@ -65,12 +94,13 @@ class Experiment():
         cellDB = [cref.changeT(T).changeNdop(Ndop) for (T,Ndop) in zip(self.parameters['temperature'],self.parameters['doping'])]
 
         # Calculate lifetime on database and check for Auger limit
-        columns_name = ["Name","Et_eV","Sn_cm2","Sp_cm2",'k']
+        columns_name = ["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap']
         ltsDB=[]
         firstPass = True
         noiseparam = 0
         for d in defectDB:
-            col = [d.name,d.Et,d.Sn,d.Sp,d.k]
+            bandgap = 1 if d.Et>0 else 0
+            col = [d.name,d.Et,d.Sn,d.Sp,d.k, np.log10(d.Sn),np.log10(d.Sp),np.log10(k),bandgap]
             skipDefect = False
             for c in cellDB:
                 if skipDefect: continue
@@ -95,13 +125,13 @@ class Experiment():
                         )[0])
         ltsDF = pd.DataFrame(ltsDB)
         ltsDF.columns = columns_name
-        self.updateParameters({'lifetime_database': ltsDF})
+        ltsID = self.updateLogDataset(ltsDF)
         if self.parameters['save']:
-            SaveObj(ltsDF,self.pathDic['objects'],'ltsDF_'+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
-            self.updateLogbook('lifetime_database_saved')
+            SaveObj(ltsDF,self.pathDic['objects'],'ltsDF_ID'+ltsID+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+            self.updateLogbook('lifetime_database_saved_ID'+ltsID)
 
         #   Log change
-        self.updateLogbook('lifetime_database_generated')
+        self.updateLogbook('lifetime_database_generated_ID'+ltsID)
     def interpolateSRH(self):
         #   Check applicability of method
 
@@ -146,31 +176,11 @@ class Experiment():
         self.updateParameters(changedParameter)
         #   Log change
         self.updateLogbook('csv_loaded')
-    def loadExp(path,filename=None):
-        if filename != None:
-            exp = LoadObj(path,filename)
-            exp.updateLogbook('Experiment_loaded_'+filename)
-            return(exp)
-        else:   # if no filename provided, take the latest one, if none exists, raise error.
-            current_timestamp = datetime.datetime(1990, 10, 24, 16, 00, 00)
-            for file in os.scandir(path):
-                if not file.is_file(): continue
-                if 'experimentObj' in file.name:
-                    timestamp = datetime.datetime.strptime(file.name.split("_")[-1].split(".")[0],"%Y-%m-%d-%H-%M-%S")
-                    if timestamp > current_timestamp:
-                        filename = file.name
-                        current_timestamp=timestamp
-            if filename != None:
-                exp = LoadObj(path,filename)
-                exp.updateLogbook('Experiment_loaded_'+filename)
-                return(exp)
-            else:
-                raise ValueError("No experimental file exists in %s"%(path))
     def loadLTS(self, filename=None):
         if filename != None:
             ltsDF = LoadObj(self.pathDic['objects'],filename)
-            self.updateLogbook('ltsDB_loaded_'+filename)
-            self.updateParameters({'lifetime_database': ltsDF})
+            ltsID = self.updateLogDataset(ltsDF)
+            self.updateLogbook('ltsDB_loaded_ID'+ltsID+"_from_"+filename)
         else:   # if no filename provided, take the latest one, if none exists, raise error.
             current_timestamp = datetime.datetime(1990, 10, 24, 16, 00, 00)
             for file in os.scandir(self.pathDic['objects']):
@@ -182,10 +192,12 @@ class Experiment():
                         current_timestamp=timestamp
             if filename != None:
                 ltsDF = LoadObj(self.pathDic['objects'],filename)
-                self.updateLogbook('lifetime_database_loaded_'+filename)
-                self.updateParameters({'lifetime_database': ltsDF})
+                ltsID = self.updateLogDataset(ltsDF)
+                self.updateLogbook('ltsDB_loaded_ID'+ltsID+"_from_"+filename)
             else:
                 raise ValueError("No ltsDF file exists in %s"%(self.pathDic['objects']))
+
+    #****   plotting methods     ****#
     def plotSRH(self,toPlot=None, plotParameters=None):
         #   Check applicability of method
         if toPlot==None:
@@ -231,13 +243,32 @@ class Experiment():
         if plotParam['yrange']!=None: ax.set_ylim(bottom=plotParam['yrange'][0],top=plotParam['yrange'][1])
         if plotParam['legend']: ax.legend(ncol=2,bbox_to_anchor=(1,0.5), loc='center left')
         ax.loglog()
-        plt.show()
         if plotParam['save']: plt.savefig(self.pathDic['figures']+"plotSRH"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+self.parameters['name']+".png",transparent=True,bbox_inches='tight')
-    def saveExp(self, name=""):
-        self.updateLogbook('Experiment_saved_'+name)
-        SaveObj(self,self.pathDic['objects'],'experimentObj_'+name+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+        plt.show()
+
+    #****   updating methods      ****#
     def updateParameters(self,Parameters):
         for key,value in Parameters.items():
             self.parameters[key]=value
     def updateLogbook(self,logItem):
         self.logbook[logItem]=datetime.datetime.now().strftime('"%d-%m-%Y %H:%M:%S"')
+    def updateLogDataset(self,logItem):
+        if self.logDataset==None:
+            self.logDataset={"0":logItem}
+            id = "0"
+        else:
+            found = False
+            for key,value in self.logDataset.items():
+                if logItem.equals(value):  id, found = key, True
+            if not found:
+                id = str(len(self.logDataset))
+                self.logDataset[id]=logItem
+        return(id)
+    def updateLogMLmodel(self,logItem):
+        if self.logML==None:
+            self.logML={"0":logItem}
+            id = "0"
+        else:
+            id = str(len(self.logML))
+            self.logML[id]=logItem
+        return(id)
