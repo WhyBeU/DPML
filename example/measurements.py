@@ -4,11 +4,38 @@
 import os
 import pandas as pd
 import datetime
+import pickle
 dir()
 exp.__dict__
 datetime.datetime.now()
+d1=datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+d2=datetime.datetime.strptime(d1,"%Y-%m-%d-%H-%M-%S")
+
+
 plt.plot([0,1],[0,1])
 import matplotlib.pyplot as plt
+import json
+df = pd.read_csv("C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\04-Experimental data -ML\\ML\\data\\2019-05-24-16-46_SRH-data_N-100000_T-[227.29999999999998, 251.79999999999998, 275.79999999999995, 301.4, 320.5, 344.29999999999995, 367.9, 391.29999999999995]_Dn-100pts_type-n_Ndop-5E+15.csv")
+df.to_csv("csv-file.csv")
+df.to_json("json-file.json")
+SaveObj(df,"","pickle-file")
+def SaveObj(obj, folder, name):
+    if '.pkl' in name:
+        with open(folder + name, 'rb') as f:
+            pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        with open(folder + name + '.pkl', 'wb') as f:
+            pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+def LoadObj(folder, name):
+    if '.pkl' in name:
+        with open(folder + name, 'rb') as f:
+            return pickle.load(f)
+    else:
+        with open(folder + name + '.pkl', 'rb') as f:
+            return pickle.load(f)
+
+df2 =  LoadObj("","pickle-file")
+
 # %%-
 
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -45,7 +72,7 @@ WAFERTYPE = 'n'
 PARAMETERS = {
     'name': 'Example github test',
     'save': True,   # True to save a copy of the printed log, the outputed model and data
-    'n_defects': 10000, # Size of simulated defect data set for machine learning
+    'n_defects': 100, # Size of simulated defect data set for machine learning
     'dn_range' : np.logspace(13,17,10),# Number of points to interpolate the curves on
 }
 # %%-
@@ -54,16 +81,31 @@ PARAMETERS = {
 #---    Script
 #///////////////////////////////////////////
 # %%--
-exp = Experiment(SaveDir=SAVEDIR)
 exp = Experiment(SaveDir=SAVEDIR, Parameters=PARAMETERS)
 exp.loadCSV(FilePath=FILEPATH,Temperature=TEMPERATURE,Doping=DOPING, Type=WAFERTYPE)
 exp.interpolateSRH()
 exp.plotSRH()
 exp.generateDB()
 exp.saveExp()
+exp.loadLTS()
+exp.logbook
+exp.logDataset['0']
 
 exp = Experiment.loadExp(SAVEDIR+"objects\\")
-exp.trainML()   # probably need to separate classification and regression
-exp.evaluate()
-exp.save()
+ml = exp.newML()
+ml.__dict__
+ml.logTrain
+ml.trainRegressor(targetCol='Et_eV')
+
+
+ml.plotRegressor()
+ml.train2Classifier()
+ml.plotClassifier()
+ml.saveMLModel()
+exp.loadMLModel()
+exp.predict(ml) # or load oldest model
+
+#other functions:
+ml.retrainModel()
+# index dataset and training with Ids to match what trained what
 # %%-

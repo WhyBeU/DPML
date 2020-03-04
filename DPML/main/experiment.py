@@ -1,5 +1,6 @@
 "Experimental main functions"
 from ..si import Cell,Defect,LTS
+from ..main import ML
 from ..utils.matplotlibstyle import *
 from ..utils import SaveObj, LoadObj
 import numpy as np
@@ -47,7 +48,7 @@ class Experiment():
 
         #   define hyper parameters for experiment
         self.parameters = Experiment.DefaultParameters
-        self.logbook = {'created': datetime.datetime.now().strftime('"%d-%m-%Y %H:%M:%S"')}
+        self.logbook = {'created': datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")}
         self.logDataset = None
         self.logML = None
         if Parameters is not None: self.updateParameters(Parameters)
@@ -76,6 +77,17 @@ class Experiment():
         SaveObj(self,self.pathDic['objects'],'experimentObj_'+name+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
 
     #****   machine learning methods     ****#
+    def newML(self, datasetID=None):
+        if self.logDataset == None : raise ValueError("Experiment doesn't have simulated data.")
+        if datasetID==None: datasetID = str(len(self.logDataset)-1) # use latest if not defined
+        if not isinstance(datasetID,str): datasetID = str(datasetID)
+        ml = ML(dataset=self.logDataset[datasetID])
+
+        #   Log change
+        mlID=self.updateLogMLmodel(ml)
+        self.updateLogbook('ML_model_created_ID'+mlID)
+        ml.logID=mlID
+        return(ml)
 
     #****   simulation methods     ****#
     def generateDB(self):
@@ -100,7 +112,7 @@ class Experiment():
         noiseparam = 0
         for d in defectDB:
             bandgap = 1 if d.Et>0 else 0
-            col = [d.name,d.Et,d.Sn,d.Sp,d.k, np.log10(d.Sn),np.log10(d.Sp),np.log10(k),bandgap]
+            col = [d.name,d.Et,d.Sn,d.Sp,d.k, np.log10(d.Sn),np.log10(d.Sp),np.log10(d.k),bandgap]
             skipDefect = False
             for c in cellDB:
                 if skipDefect: continue
@@ -132,6 +144,7 @@ class Experiment():
 
         #   Log change
         self.updateLogbook('lifetime_database_generated_ID'+ltsID)
+
     def interpolateSRH(self):
         #   Check applicability of method
 
@@ -251,7 +264,7 @@ class Experiment():
         for key,value in Parameters.items():
             self.parameters[key]=value
     def updateLogbook(self,logItem):
-        self.logbook[logItem]=datetime.datetime.now().strftime('"%d-%m-%Y %H:%M:%S"')
+        self.logbook[logItem]=datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
     def updateLogDataset(self,logItem):
         if self.logDataset==None:
             self.logDataset={"0":logItem}
@@ -264,11 +277,14 @@ class Experiment():
                 id = str(len(self.logDataset))
                 self.logDataset[id]=logItem
         return(id)
-    def updateLogMLmodel(self,logItem):
+    def updateLogMLmodel(self,logItem,logID=None):
         if self.logML==None:
             self.logML={"0":logItem}
             id = "0"
         else:
-            id = str(len(self.logML))
+            if logID==None:
+                id = str(len(self.logML))
+            else:
+                id = logID
             self.logML[id]=logItem
         return(id)
