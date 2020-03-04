@@ -72,14 +72,40 @@ WAFERTYPE = 'n'
 PARAMETERS = {
     'name': 'Example github test',
     'save': True,   # True to save a copy of the printed log, the outputed model and data
-    'n_defects': 100, # Size of simulated defect data set for machine learning
+    'n_defects': 1000, # Size of simulated defect data set for machine learning
     'dn_range' : np.logspace(13,17,10),# Number of points to interpolate the curves on
+    'training_keys': ['Et_eV_upper','Et_eV_lower','logk_upper','logk_lower'] # for k prediction
+    # 'training_keys': ['Et_eV_upper','Et_eV_lower','logSn_upper','logSn_lower','logSp_upper','logSp_lower'] # for Sn,Sp prediction
 }
 # %%-
 
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 #---    Script
 #///////////////////////////////////////////
+# %%--  Define experiment and generate defect database
+exp = Experiment(SaveDir=SAVEDIR, Parameters=PARAMETERS)
+exp.loadCSV(FilePath=FILEPATH,Temperature=TEMPERATURE,Doping=DOPING, Type=WAFERTYPE)
+exp.interpolateSRH()
+exp.plotSRH()
+exp.generateDB()
+exp.saveExp()
+# %%-
+
+# %%--  Train machine learning algorithms
+exp = Experiment.loadExp(SAVEDIR+"objects\\")
+ml = exp.newML()
+for trainKey in exp.parameters['training_keys']:
+    targetCol, bandgapParam = trainKey.rsplit('_',1)
+    ml.trainRegressor(targetCol=targetCol, trainParameters={'bandgap':bandgapParam})
+
+ml.trainClassifier(targetCol='bandgap')
+mlID=exp.updateLogMLmodel(ml,ml.logID)
+exp.saveExp()
+# %%-
+# %%--  Make ML predictions
+
+# %%-
+
 # %%--
 exp = Experiment(SaveDir=SAVEDIR, Parameters=PARAMETERS)
 exp.loadCSV(FilePath=FILEPATH,Temperature=TEMPERATURE,Doping=DOPING, Type=WAFERTYPE)
@@ -96,6 +122,9 @@ ml = exp.newML()
 ml.__dict__
 ml.logTrain
 ml.trainRegressor(targetCol='Et_eV')
+ml.trainClassifier(targetCol='bandgap')
+
+
 
 
 ml.plotRegressor()
