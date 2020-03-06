@@ -1,8 +1,11 @@
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 #-------  TO DO
 #///////////////////////////////////////////
-
-
+  --Class development
+    -experiment
+      Add compare available database function
+    -ML
+      Add log10 of inputs before normalization
 
 
 
