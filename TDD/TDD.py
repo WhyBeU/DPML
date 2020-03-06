@@ -44,3 +44,9 @@ checkCell()
 checkDefect()
 checkLTS()
 # %%-
+
+
+# %%--  Other tests
+Logger.printTitle('t'*41)
+Logger.printDic({'sgdsdf':43,'erghegegrw':[5,6,7,8,],'test':'string'}, skipKeys=['test'])
+# %%-
