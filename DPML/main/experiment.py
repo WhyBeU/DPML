@@ -17,6 +17,7 @@ class Experiment():
     DefaultParameters = {
         'name':"",  # string added to every saved file for reference
         'save': False,  # True to save a copy of the printed log, the outputed model and data
+        'logML': False, # Log copy of print to console into text file
         'n_defects': 100, # Size of simulated defect data set for machine learning
         'dn_range' : np.logspace(13,17,10),# Number of points to interpolate the curves on
         'Et_min':-0.55,  #   Minimum energy level
@@ -27,6 +28,7 @@ class Experiment():
         'noise_model':"",  #   Type of noise in SRH generation
         'noise_parameter':0, #Parameter used to vary noise level from noise model
         'check_auger':True,     #   Check if lifetime generation should be below Auger limit
+
     }
 
     #****   general methods     ****#
@@ -72,21 +74,32 @@ class Experiment():
                 return(exp)
             else:
                 raise ValueError("No experimental file exists in %s"%(path))
-    def saveExp(self, name=""):
+    def saveExp(self, name=None):
+        if name == None: name = self.parameters['name']
         self.updateLogbook('Experiment_saved_'+name)
         SaveObj(self,self.pathDic['objects'],'experimentObj_'+name+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
 
     #****   machine learning methods     ****#
-    def newML(self, datasetID=None):
+    def newML(self, datasetID=None, mlParameters=None):
         if self.logDataset == None : raise ValueError("Experiment doesn't have simulated data.")
         if datasetID==None: datasetID = str(len(self.logDataset)-1) # use latest if not defined
         if not isinstance(datasetID,str): datasetID = str(datasetID)
-        ml = ML(dataset=self.logDataset[datasetID])
+        mlParam = {'name':None,'save':None,'logML':None}
+        if mlParameters!=None:
+            for key in mlParameters.keys(): mlParam[key]=mlParameters[key]
+        if mlParam['save']==None: mlParam['save']=self.parameters['save']
+        if mlParam['logML']==None: mlParam['logML']=self.parameters['logML']
+        if self.logML==None:
+            mlID = "0"
+        else:
+            mlID = str(len(self.logML))
+        if mlParam['name']==None:mlParam['name']= self.parameters['name']+"-#"+mlID
+        mlParam['mlID']=mlID
+        ml = ML(Dataset=self.logDataset[datasetID], SaveDir=self.pathDic['savedir'],Parameters=mlParam)
 
         #   Log change
-        mlID=self.updateLogMLmodel(ml)
-        self.updateLogbook('ML_model_created_ID'+mlID)
-        ml.logID=mlID
+        mlID=self.updateLogMLmodel(ml, logID=mlID)
+        self.updateLogbook('ML_model_created_ID'+mlID+"_"+ml.parameters['name'])
         return(ml)
 
     #****   simulation methods     ****#
@@ -144,7 +157,6 @@ class Experiment():
 
         #   Log change
         self.updateLogbook('lifetime_database_generated_ID'+ltsID)
-
     def interpolateSRH(self):
         #   Check applicability of method
 
