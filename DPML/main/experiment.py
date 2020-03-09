@@ -101,6 +101,30 @@ class Experiment():
         mlID=self.updateLogMLmodel(ml, logID=mlID)
         self.updateLogbook('ML_model_created_ID'+mlID+"_"+ml.parameters['name'])
         return(ml)
+    def loadML(self, filename=None):
+        if filename != None:
+            ml = LoadObj(self.pathDic['objects'],filename)
+        else:   # if no filename provided, take the latest one, if none exists, raise error.
+            current_timestamp = datetime.datetime(1990, 10, 24, 16, 00, 00)
+            for file in os.scandir(self.pathDic['objects']):
+                if not file.is_file(): continue
+                if 'mlObj' in file.name:
+                    timestamp = datetime.datetime.strptime(file.name.split("_")[-1].split(".")[0],"%Y-%m-%d-%H-%M-%S")
+                    if timestamp > current_timestamp:
+                        filename = file.name
+                        current_timestamp=timestamp
+            if filename != None:
+                ml = LoadObj(self.pathDic['objects'],filename)
+            else:
+                raise ValueError("No ltsDF file exists in %s"%(self.pathDic['objects']))
+
+        if ml.parameters['mlID'] != None:
+            self.updateLogMLmodel(ml,logID=ml.parameters['mlID'])
+        else:
+            mlID = self.updateLogMLmodel(ml)
+            ml.parameters['mlID'] =mlID
+        self.updateLogbook('ML_loaded_ID'+ml.parameters['mlID']+"_from_"+filename)
+        return(ml)
 
     #****   simulation methods     ****#
     def generateDB(self):
