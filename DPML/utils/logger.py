@@ -31,7 +31,7 @@ class Logger():
     """
     #****   Constant declaration    ****#
     TitleLength=40
-    
+
     #****   Core methods    ****#
     def __init__(self, logfile: str):
         self.terminal=None
@@ -55,11 +55,12 @@ class Logger():
         sys.stdout = self
 
     #****   Additioinnal methods related to printing    ****#
-    def printTitle(title):
+    def printTitle(title, titleLen = None, newLine=True):
         """Print out title header"""
-        if len(title)>Logger.TitleLength: warnings.warn("In makeTitle, title length bigger than %s"%(Logger.TitleLength))
-        print("="*np.max([0,np.int((Logger.TitleLength-len(title))/2)+(Logger.TitleLength-len(title))%2])+" "+title+" "+"="*np.max([0,np.int((Logger.TitleLength-len(title))/2)]))
-        print('\n')
+        if titleLen == None: titleLen = Logger.TitleLength
+        if len(title)>titleLen: warnings.warn("In makeTitle, title length bigger than %s"%(titleLen))
+        print("="*np.max([0,np.int((titleLen-len(title))/2)+(titleLen-len(title))%2])+" "+title+" "+"="*np.max([0,np.int((titleLen-len(title))/2)]))
+        if newLine: print('\n')
     def printDic(dic,skipKeys=None):
         """Print dictionary nicely, skipping the 'skipKeys' keys"""
         if skipKeys==None: skipKeys=['']
