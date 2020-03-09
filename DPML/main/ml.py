@@ -25,6 +25,7 @@ class ML():
         'name':'',
         'save': False,
         'logML': False,
+        'mlID':None,
     }
 
     #****   Core methods      ****#
@@ -48,20 +49,21 @@ class ML():
         #   define hyper parameters for ML training
         self.dataset = Dataset.copy(deep=True)
         self.logTrain={}
-        self.pathDic['logfile']=self.pathDic['traces']+self.parameters['name']++"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+".txt"
+        self.pathDic['logfile']=self.pathDic['traces']datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+"_"+self.parameters['name']+".txt"
         if self.parameters['logML']: self.logger = Logger(self.pathDic['logfile'])
 
         #   Print header for logfile
         if self.parameters['logML']: self.logger.open()
-        print(">"*(Logger.TitleLength*2))
-        print(" "*np.max([0,np.int(((Logger.TitleLength*2)-len(self.parameters['name']))/2)])+self.parameters['name'])
-        print("<"*(Logger.TitleLength*2))
-        print("\n")
-        Logger.printTitle('HYPER-PARAMETERS')
+        Logger.printTitle(self.parameters['name'],titleLen=80, newLine=False)
+        Logger.printTitle('HYPER-PARAMETERS',titleLen=60, newLine=False)
+        Logger.printTitle('PARAMETERS',titleLen=20)
         Logger.printDic(self.parameters)
-        Logger.printTitle('PATH')
+        Logger.printTitle('PATH',titleLen=20)
         Logger.printDic(self.pathDic)
         if self.parameters['logML']: self.logger.close()
+    def saveML(self, name=None):
+        if name == None: name = self.parameters['name']
+        SaveObj(self,self.pathDic['objects'],'mlObj_'+name+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     def updateParameters(self,Parameters):
         for key,value in Parameters.items():
             self.parameters[key]=value
@@ -72,7 +74,7 @@ class ML():
         trainParam={
             'validation_fraction': 0.01,    # validation dataset percentage
             'normalize': False,     # Wether or not to normalize the input data (True for NN)
-            'base_model': RandomForestRegressor(n_estimators=100, n_jobs=-1),
+            'base_model': RandomForestRegressor(n_estimators=100, n_jobs=-1, verbose=2),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
             'normalize': True,
@@ -83,9 +85,18 @@ class ML():
         trainKey = targetCol+"_"+trainParam['bandgap']
         self.logTrain[trainKey]={
             'target_col':targetCol,
+            'prediction_type': 'regression',
             'train_parameters':trainParam,
         }
         dfAll =  self.dataset.copy(deep=True)
+
+        #   Log parameters
+        if self.parameters['logML']: self.logger.open()
+        Logger.printTitle('TRAINING-REG_'+trainKey,titleLen=60, newLine=False)
+        Logger.printTitle('PARAMETERS',titleLen=40)
+        Logger.printDic(trainParam)
+        if self.parameters['logML']: self.logger.close()
+
         #   Normalize dataset
         if trainParam['normalize']:
             scaler_dict = {}
@@ -108,11 +119,14 @@ class ML():
         yVal = dfVal[targetCol]
 
         #   Train model
+        if self.parameters['logML']: self.logger.open()
+        Logger.printTitle('VERBOSE',titleLen=40)
         model = trainParam['base_model']
         training_start_time = time.time()
         model.fit(xTrain,yTrain)
         training_end_time =time.time()
         self.logTrain[trainKey]['model'] = model
+        if self.parameters['logML']: self.logger.close()
 
         #   Score
         actTrain = yTrain
@@ -133,6 +147,13 @@ class ML():
             "training_rmse":"{:.2e}".format(mean_squared_error(actTrain,predTrain,squared=False)),
             "validation_rmse":"{:.2e}".format(mean_squared_error(actVal,predVal,squared=False)),
         }
+
+        #   Log results
+        if self.parameters['logML']: self.logger.open()
+        Logger.printTitle('RESULTS',titleLen=40)
+        Logger.printDic(self.logTrain[trainKey]['results'])
+        if self.parameters['logML']: self.logger.close()
+
         #   Save validation data
         dfVal_output = dfVal.copy(deep=True)
         if trainParam['normalize']:
@@ -147,7 +168,7 @@ class ML():
         trainParam={
             'validation_fraction': 0.01,    # validation dataset percentage
             'normalize': False,     # Wether or not to normalize the input data (True for NN)
-            'base_model': MLPClassifier((100,100),alpha=0.001, activation = 'relu', learning_rate='adaptive'),
+            'base_model': MLPClassifier((100,100),alpha=0.001, activation = 'relu', learning_rate='adaptive', verbose=2),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
             'normalize': True,
@@ -158,8 +179,10 @@ class ML():
         trainKey = targetCol+"_"+trainParam['bandgap']
         self.logTrain[trainKey]={
             'target_col':targetCol,
+            'prediction_type': 'classification',
             'train_parameters':trainParam,
         }
+
         #   Normalize dataset
         if trainParam['normalize']:
             scaler_dict = {}
@@ -171,6 +194,14 @@ class ML():
             scaler_dict=None
 
         self.logTrain['scaler']=scaler_dict
+
+        #   Log parameters
+        if self.parameters['logML']: self.logger.open()
+        Logger.printTitle('TRAINING-CLASS_'+trainKey,titleLen=60, newLine=False)
+        Logger.printTitle('PARAMETERS',titleLen=40)
+        Logger.printDic(trainParam)
+        if self.parameters['logML']: self.logger.close()
+
         #   Prepare Dataset for training
         dfTrain, dfVal = train_test_split(self.dataset, test_size=trainParam['validation_fraction'],random_state=trainParam['random_seed'])
         xTrain = dfTrain.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
@@ -179,11 +210,14 @@ class ML():
         yVal = dfVal[targetCol]
 
         #   Train model
+        if self.parameters['logML']: self.logger.open()
+        Logger.printTitle('VERBOSE',titleLen=40)
         model = trainParam['base_model']
         training_start_time = time.time()
         model.fit(xTrain,yTrain)
         training_end_time =time.time()
         self.logTrain[trainKey]['model'] = model
+        if self.parameters['logML']: self.logger.close()
 
         #   Score
         actTrain = yTrain
@@ -205,6 +239,20 @@ class ML():
             "training_recall":"{:.3f}".format(recall_score(actTrain,predTrain)),
             "validation_recall":"{:.3f}".format(recall_score(actVal,predVal)),
         }
+        CM_labels = sorted(self.dataset[targetCol].unique())
+        ind = ['Pred_'+str(c) for c in CM_labels]
+        col = ['Act_'+str(c) for c in CM_labels]
+        self.logTrain[trainKey]['classification_report'] = classification_report(actVal,predVal, digits=3)
+        self.logTrain[trainKey]['confusion_matrix'] = pd.DataFrame(confusion_matrix(actVal,predVal),columns=col,index=ind).transpose()
+        #   Log results
+        if self.parameters['logML']: self.logger.open()
+        Logger.printTitle('RESULTS',titleLen=40)
+        Logger.printDic(self.logTrain[trainKey]['results'])
+        Logger.printTitle('CONFUSION MATRIX',titleLen=40)
+        self.printConfusionMatrix(trainKey)
+        Logger.printTitle('CLASSIFICATION REPORT',titleLen=40)
+        self.printClassificationReport(trainKey)
+        if self.parameters['logML']: self.logger.close()
 
         #   Save validation data
         dfVal_output = dfVal.copy(deep=True)
@@ -219,18 +267,19 @@ class ML():
 
     #****   Plotting methods      ****#
     def plotRegressor(self,trainKey, plotParameters=None):
+        if self.logTrain[trainKey]['prediction_type'] != 'regression': raise ValueError('Wrong prediction type')
         plotParam={
             'figsize':(8,8),
             'xlabel':'True value',
             'ylabel':'Predicted value',
-            'legend':True,
             'show_yx':True,
             'log_plot':False,
             'scatter_alpha':0.8,
             'scatter_s':15,
-            'scatter_c': 'C8'
+            'scatter_c': 'C8',
+            'save':False,
         }
-
+        if self.parameters['save']: plotParam['save']=True
         if plotParameters!=None:
             for key in plotParameters.keys(): plotParam[key]=plotParameters[key]
 
@@ -247,3 +296,15 @@ class ML():
         ax.set_title(targetCol+ " on "+bandgapParam+" bandgap", fontsize=14)
         ax.scatter(df_Val.actual,df_Val.predicted,marker=".",alpha=plotParam['scatter_alpha'],s=plotParam['scatter_s'],c=plotParam['scatter_c'])
         if plotParam['show_yx']: ax.plot([np.min([df_Val.actual.min(),df_Val.predicted.min()]),np.max([df_Val.actual.max(),df_Val.predicted.max()])],[np.min([df_Val.actual.min(),df_Val.predicted.min()]),np.max([df_Val.actual.max(),df_Val.predicted.max()])],'k--')
+        if plotParam['save']:   plt.savefig(self.pathDic['figures']+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")+"Reg_"+trainKey+".png",transparent=True,bbox_inches='tight')
+        plt.show()
+    def printConfusionMatrix(self,trainKey, printParameters=None):
+        if self.logTrain[trainKey]['prediction_type'] != 'classification': raise ValueError('Wrong prediction type')
+        print(self.logTrain[trainKey]['confusion_matrix'])
+        print('\n')
+    def printClassificationReport(self,trainKey,printParameters=None):
+        if self.logTrain[trainKey]['prediction_type'] != 'classification': raise ValueError('Wrong prediction type')
+        print(self.logTrain[trainKey]['classification_report'])
+        print('\n')
+
+    #****   Exporting methods      ****#
