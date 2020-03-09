@@ -46,7 +46,6 @@ from DPML import *
 import numpy as np
 # %%-
 
-
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 #---    Setup
 #///////////////////////////////////////////
@@ -72,10 +71,12 @@ WAFERTYPE = 'n'
 PARAMETERS = {
     'name': 'Example github test',
     'save': True,   # True to save a copy of the printed log, the outputed model and data
+    'logML':True,   #   Log the output of the console to a text file
     'n_defects': 1000, # Size of simulated defect data set for machine learning
     'dn_range' : np.logspace(13,17,10),# Number of points to interpolate the curves on
-    'training_keys': ['Et_eV_upper','Et_eV_lower','logk_upper','logk_lower'] # for k prediction
-    # 'training_keys': ['Et_eV_upper','Et_eV_lower','logSn_upper','logSn_lower','logSp_upper','logSp_lower'] # for Sn,Sp prediction
+    'classification_training_keys': ['bandgap_all'], # for k prediction
+    'regression_training_keys': ['Et_eV_upper','Et_eV_lower','logk_upper','logk_lower'], # for k prediction
+    # 'regression_training_keys': ['Et_eV_upper','Et_eV_lower','logSn_upper','logSn_lower','logSp_upper','logSp_lower'], # for Sn,Sp prediction
 }
 # %%-
 
@@ -94,16 +95,32 @@ exp.saveExp()
 # %%--  Train machine learning algorithms
 exp = Experiment.loadExp(SAVEDIR+"objects\\")
 ml = exp.newML()
-for trainKey in exp.parameters['training_keys']:
+for trainKey in exp.parameters['regression_training_keys']:
     targetCol, bandgapParam = trainKey.rsplit('_',1)
     ml.trainRegressor(targetCol=targetCol, trainParameters={'bandgap':bandgapParam})
+for trainKey in exp.parameters['classification_training_keys']:
+    targetCol, bandgapParam = trainKey.rsplit('_',1)
+    ml.trainClassifier(targetCol=targetCol, trainParameters={'bandgap':bandgapParam})
+for trainKey in exp.parameters['regression_training_keys']: ml.plotRegressor(trainKey)
 
-ml.trainClassifier(targetCol='bandgap')
-mlID=exp.updateLogMLmodel(ml,ml.logID)
+mlID=exp.updateLogMLmodel(ml,logID=ml.parameters['mlID'])
+ml.saveML()
 exp.saveExp()
 # %%-
 # %%--  Make ML predictions
+exp = Experiment.loadExp(SAVEDIR+"objects\\")
+ml = exp.loadML()
+# %%-
 
+# %%--  Export data
+
+# %%-
+
+
+# %%--  Inspect
+exp.logbook
+exp.logDataset
+exp.logML['0'].logTrain
 # %%-
 
 # %%--
