@@ -66,16 +66,17 @@ FILEPATH = "C:\\Users\\z5189526\\Documents\\GitHub\\DPML\\example\\sample.csv"
 TEMPERATURE = [227.3,251.8,275.8,301.4,320.5,344.3,367.9,391.3]
 DOPING = [5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15]
 WAFERTYPE = 'n'
+NAME = ' Example github'
 # %%-
 # %%--  Hyper-parameters
 PARAMETERS = {
-    'name': 'Example github test',
+    'name': NAME,
     'save': True,   # True to save a copy of the printed log, the outputed model and data
     'logML':True,   #   Log the output of the console to a text file
     'n_defects': 1000, # Size of simulated defect data set for machine learning
     'dn_range' : np.logspace(13,17,10),# Number of points to interpolate the curves on
     'classification_training_keys': ['bandgap_all'], # for k prediction
-    'regression_training_keys': ['Et_eV_upper','Et_eV_lower','logk_upper','logk_lower'], # for k prediction
+    'regression_training_keys': ['Et_eV_upper','Et_eV_lower','logk_all'], # for k prediction
     # 'regression_training_keys': ['Et_eV_upper','Et_eV_lower','logSn_upper','logSn_lower','logSp_upper','logSp_lower'], # for Sn,Sp prediction
 }
 # %%-
@@ -101,7 +102,7 @@ for trainKey in exp.parameters['regression_training_keys']:
 for trainKey in exp.parameters['classification_training_keys']:
     targetCol, bandgapParam = trainKey.rsplit('_',1)
     ml.trainClassifier(targetCol=targetCol, trainParameters={'bandgap':bandgapParam})
-for trainKey in exp.parameters['regression_training_keys']: ml.plotRegressor(trainKey)
+for trainKey in exp.parameters['regression_training_keys']: ml.plotRegressor(trainKey, plotParameters={'scatter_c':'black'})
 
 mlID=exp.updateLogMLmodel(ml,logID=ml.parameters['mlID'])
 ml.saveML()
@@ -110,48 +111,30 @@ exp.saveExp()
 # %%--  Make ML predictions
 exp = Experiment.loadExp(SAVEDIR+"objects\\")
 ml = exp.loadML()
+exp.predict()
 # %%-
 
 # %%--  Export data
+exp = Experiment.loadExp(SAVEDIR+"objects\\")
+ml = exp.loadML()
 
+exp.exportDataset()
+exp.exportSRHCurves()
+exp.exportValidationData()
+exp.exportPrediction()
 # %%-
 
 
 # %%--  Inspect
 exp.logbook
-exp.logDataset
+exp.logDataset['0'].head()
+exp.parameter
 exp.logML['0'].logTrain
+ml.__dict__
+exp.__dict__
+ml.logger = None
 # %%-
 
 # %%--
-exp = Experiment(SaveDir=SAVEDIR, Parameters=PARAMETERS)
-exp.loadCSV(FilePath=FILEPATH,Temperature=TEMPERATURE,Doping=DOPING, Type=WAFERTYPE)
-exp.interpolateSRH()
-exp.plotSRH()
-exp.generateDB()
-exp.saveExp()
-exp.loadLTS()
-exp.logbook
-exp.logDataset['0']
 
-exp = Experiment.loadExp(SAVEDIR+"objects\\")
-ml = exp.newML()
-ml.__dict__
-ml.logTrain
-ml.trainRegressor(targetCol='Et_eV')
-ml.trainClassifier(targetCol='bandgap')
-
-
-
-
-ml.plotRegressor()
-ml.train2Classifier()
-ml.plotClassifier()
-ml.saveMLModel()
-exp.loadMLModel()
-exp.predict(ml) # or load oldest model
-
-#other functions:
-ml.retrainModel()
-# index dataset and training with Ids to match what trained what
 # %%-
