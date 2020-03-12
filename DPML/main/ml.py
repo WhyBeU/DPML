@@ -91,6 +91,8 @@ class ML():
             'train_parameters':trainParam,
         }
         dfAll =  self.dataset.copy(deep=True)
+        for col in self.dataset.columns:
+            if col not in ["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap']: dfAll[col]=np.log10(dfAll[col])
 
         #   Log parameters
         if self.parameters['logML']: self.logger.open()
@@ -105,12 +107,12 @@ class ML():
             for col in self.dataset.columns:
                 if col in ['Name','bandgap']: continue
                 scaler_dict[col]=MinMaxScaler()
-                if col not in ["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap']: dfAll[col]=np.log10(dfAll[col])
+                # if col not in ["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap']: dfAll[col]=np.log10(dfAll[col])
                 dfAll[col]=scaler_dict[col].fit_transform(dfAll[col].values.reshape(-1,1))
         else:
             scaler_dict=None
-
-        self.logTrain['scaler']=scaler_dict
+        self.dfAllnorm=dfAll.copy(deep=True)
+        self.logTrain[trainKey]['scaler']=scaler_dict
         #   Prepare Dataset for training
         if  trainParam['bandgap'] == 'upper': dfAll = dfAll.loc[dfAll['bandgap']==1]
         if  trainParam['bandgap'] == 'lower': dfAll = dfAll.loc[dfAll['bandgap']==0]
@@ -185,17 +187,21 @@ class ML():
             'train_parameters':trainParam,
         }
 
+        dfAll =  self.dataset.copy(deep=True)
+        for col in self.dataset.columns:
+            if col not in ["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap']: dfAll[col]=np.log10(dfAll[col])
+
         #   Normalize dataset
         if trainParam['normalize']:
             scaler_dict = {}
             for col in self.dataset.columns:
                 if col in ['Name','bandgap']: continue
                 scaler_dict[col]=MinMaxScaler()
-                self.dataset[col]=scaler_dict[col].fit_transform(self.dataset[col].values.reshape(-1,1))
+                dfAll[col]=scaler_dict[col].fit_transform(dfAll[col].values.reshape(-1,1))
         else:
             scaler_dict=None
 
-        self.logTrain['scaler']=scaler_dict
+        self.logTrain[trainKey]['scaler']=scaler_dict
 
         #   Log parameters
         if self.parameters['logML']: self.logger.open()
@@ -205,7 +211,7 @@ class ML():
         if self.parameters['logML']: self.logger.close()
 
         #   Prepare Dataset for training
-        dfTrain, dfVal = train_test_split(self.dataset, test_size=trainParam['validation_fraction'],random_state=trainParam['random_seed'])
+        dfTrain, dfVal = train_test_split(dfAll, test_size=trainParam['validation_fraction'],random_state=trainParam['random_seed'])
         xTrain = dfTrain.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
         yTrain = dfTrain[targetCol]
         xVal = dfVal.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)

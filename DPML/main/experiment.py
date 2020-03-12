@@ -130,6 +130,38 @@ class Experiment():
         self.updateLogbook('ML_loaded_ID'+ml.parameters['mlID']+"_from_"+filename)
         if ml.logger !=None: ml.logger = Logger(ml.logger)
         return(ml)
+    def predictML(self, mlIDs = None, header = None):
+        #   Check for applicabiliy
+        if mlIDs == None: mlIDs = [str(i) for i in range(len(self.logML))]
+        if header == None: header = ['Et_eV','Sn_cm2','Sp_cm2','k','logSn','logSp','logk']
+        self.predictCsv = {}
+        for mlID in mlIDs:
+            ml = self.logML[mlID]
+            self.predictCsv[mlID]={}
+            #   Create dataset feature vector
+            for trainKey, mlDic in ml.logTrain.items():
+                vector = [t for key in self.expKeys for t in self.expDic[key]['tau_interp']]
+                if trainKey=='scaler': continue
+                targetCol, bandgapParam = trainKey.rsplit('_',1)
+                if mlDic['train_parameters']['normalize']:
+                    #   scale the feature vector
+                    if len(vector) != len(mlDic['scaler'])-len(header): raise ValueError('Feature vector is not the same size as the trained ML')
+                    i=0
+                    for scaler_key,scaler_value in mlDic['scaler'].items():
+                        if scaler_key in header: continue
+                        vector[i]=np.log10(vector[i])
+                        vector[i]=scaler_value.transform(vector[i].reshape(-1,1))[0][0]
+                        i+=1
+                #   Call ML model and predict on sample data
+                if mlDic['train_parameters']['normalize']:
+                    try:
+                        self.predictCsv[mlID][trainKey] = mlDic['scaler'][targetCol].inverse_transform([mlDic['model'].predict([vector])])[0][0]
+                    except:
+                        self.predictCsv[mlID][trainKey] = mlDic['model'].predict([vector])[0]
+                else:
+                    self.predictCsv[mlID][trainKey] = mlDic['model'].predict([vector])[0]
+
+        self.updateLogbook('prediction_made')
 
     #****   simulation methods     ****#
     def generateDB(self):
@@ -158,7 +190,7 @@ class Experiment():
             skipDefect = False
             for c in cellDB:
                 if firstPass:
-                    for dn in self.parameters['dn_range']: columns_name.append("%sK_%.1Ecm-3_ %.0Ecm-3" % (c.T,c.Ndop,dn))
+                    for dn in self.parameters['dn_range']: columns_name.append("%sK_%scm-3_ %scm-3" % (c.T,c.Ndop,dn))
                     skipDefect = True
                     continue
                 if skipDefect: continue
@@ -172,14 +204,16 @@ class Experiment():
             firstPass = False
             if not skipDefect: ltsDB.append(col)
             if skipDefect:  # if we skipped a defect, add a new random one to have n_defects in the database at the end
-                defectDB.append(Defect.randomDB(
+                newDefect = Defect.randomDB(
                         N=1,
                         Et_min = self.parameters['Et_min'],
                         Et_max = self.parameters['Et_max'],
                         S_min = self.parameters['S_min'],
                         S_max = self.parameters['S_max'],
                         Nt = self.parameters['Nt']
-                        )[0])
+                        )[0]
+                newDefect.name = d.name
+                defectDB.append(newDefect)
         ltsDF = pd.DataFrame(ltsDB)
         ltsDF.columns = columns_name
         ltsID = self.updateLogDataset(ltsDF)
