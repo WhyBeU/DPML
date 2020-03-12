@@ -54,7 +54,7 @@ class Logger():
         self.log = open(self.logfile, "a+")
         sys.stdout = self
 
-    #****   Additioinnal methods related to printing    ****#
+    #****   Additionnal methods related to printing    ****#
     def printTitle(title, titleLen = None, newLine=True):
         """Print out title header"""
         if titleLen == None: titleLen = Logger.TitleLength
