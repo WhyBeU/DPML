@@ -104,7 +104,7 @@ class Experiment():
         #   Log change
         mlID=self.updateLogMLmodel(ml, logID=mlID)
         self.updateLogbook('ML_model_created_ID'+mlID+"_"+ml.parameters['name'])
-        return(ml)
+        return(self.logML[mlID])
     def loadML(self, filename=None):
         if filename != None:
             ml = LoadObj(self.pathDic['objects'],filename)
@@ -153,13 +153,17 @@ class Experiment():
                         vector[i]=scaler_value.transform(vector[i].reshape(-1,1))[0][0]
                         i+=1
                 #   Call ML model and predict on sample data
-                if mlDic['train_parameters']['normalize']:
-                    try:
-                        self.predictCsv[mlID][trainKey] = mlDic['scaler'][targetCol].inverse_transform([mlDic['model'].predict([vector])])[0][0]
-                    except:
-                        self.predictCsv[mlID][trainKey] = mlDic['model'].predict([vector])[0]
-                else:
-                    self.predictCsv[mlID][trainKey] = mlDic['model'].predict([vector])[0]
+                if mlDic['prediction_type'] == 'regression':
+                    if mlDic['train_parameters']['normalize']:  self.predictCsv[mlID][trainKey] = mlDic['scaler'][targetCol].inverse_transform([mlDic['model'].predict([vector])])[0][0]
+                if mlDic['prediction_type'] == 'classification':
+                    self.predictCsv[mlID][trainKey] = (mlDic['model'].predict([vector])[0],mlDic['model'].predict_proba([vector])[0])
+
+            #   Log in the trace
+            if ml.parameters['logML']: ml.logger.open()
+            Logger.printTitle(' ML PREDICTION',titleLen=60, newLine=False)
+            Logger.printTitle('mlID '+mlID,titleLen=40)
+            Logger.printDic(self.predictCsv[mlID])
+            if ml.parameters['logML']: ml.logger.close()
 
         self.updateLogbook('prediction_made')
 
@@ -336,6 +340,21 @@ class Experiment():
         ax.loglog()
         if plotParam['save']: plt.savefig(self.pathDic['figures']+"plotSRH"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+self.parameters['name']+".png",transparent=True,bbox_inches='tight')
         plt.show()
+
+    #****   exporting methods     ****#
+    def exportDataset(self,filename=None):
+        if filename == None: filename = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+"_"+self.parameters['name']
+        for key, dataset in self.logDataset.items():
+            filename_temp=filename+"_datasetID_"+key+".csv"
+            dataset.to_csv(self.pathDic['outputs']+filename_temp,encoding='utf-8', index=False)
+        self.updateLogbook('dataset_exported')
+    def exportValidationset(self,filename=None):
+        if filename == None: filename = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+"_"+self.parameters['name']
+        for mlID, ml in self.logML.items():
+            for trainKey, trainLog in ml.logTrain.items():
+                filename_temp = filename+"_mlID_"+mlID+"_ValidationSet_"+trainKey+'.csv'
+                trainLog['validation_data'].to_csv(self.pathDic['outputs']+filename_temp,encoding='utf-8', index=False)
+        self.updateLogbook('validation_set_exported')
 
     #****   updating methods      ****#
     def updateParameters(self,Parameters):
