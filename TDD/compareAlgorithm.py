@@ -29,7 +29,11 @@ PARAMETERS = {
     'save': False,   # True to save a copy of the printed log, the outputed model and data
     'logML':True,   #   Log the output of the console to a text file
     'n_defects': 1000, # Size of simulated defect data set for machine learning
+<<<<<<< Updated upstream
     'dn_range' : np.logspace(13,17,10),# Number of points to interpolate the curves on
+=======
+    'dn_range' : np.logspace(13,17,100),# Number of points to interpolate the curves on
+>>>>>>> Stashed changes
     'training_keys': ['Et_eV_upper','Et_eV_lower','logk_upper','logk_lower'] # for k prediction
     # 'training_keys': ['Et_eV_upper','Et_eV_lower','logSn_upper','logSn_lower','logSp_upper','logSp_lower'] # for Sn,Sp prediction
 }
@@ -81,3 +85,18 @@ ml.__dict__
 ml.logTrain
 ml.trainRegressor(targetCol='Et_eV')
 ml.trainClassifier(targetCol='bandgap')
+<<<<<<< Updated upstream
+=======
+
+
+# %%--  Inspect
+exp.logbook
+exp.logDataset['1'].head()
+exp.parameter
+exp.logML['0'].logTrain
+ml.__dict__
+exp.__dict__
+ml.logger = None
+np.power(10,exp.predictCsv['0']['logk_all'])
+# %%-
+>>>>>>> Stashed changes
