@@ -1,4 +1,9 @@
 "Get attributes and print all attributes"
+# import dill as pickle
+# from getpass import getpass
+# pwd = getpass("Insert password: ")
+# del getpass
+import pickle
 
 def PrintSelf(obj):
     for attr in dir(obj):

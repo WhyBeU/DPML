@@ -5,8 +5,8 @@ import warnings
 class Defect():
     #****   Constant declaration    ****#
     Etbound = 0.6       #   Absolute bound for Defect level
-    Sminbound = 1E-18   #   Absolute minimum bound for Capture Cross Section
-    Smaxbound = 1E-12   #   Absolute maximum bound for Capture Cross Section
+    Sminbound = 1E-20   #   Absolute minimum bound for Capture Cross Section
+    Smaxbound = 1E-10   #   Absolute maximum bound for Capture Cross Section
     DefaultNt = 1E12    #   Default value for Defect density if none is provided
 
     #****   Method declaration      ****#
@@ -66,7 +66,7 @@ class Defect():
         self.Ap=1/(Sp*Nt)
         self.k=Sn/Sp
         self.name=name
-    def random_db(N,Et_min = None, Et_max = None, S_min = None, S_max = None, Nt = None):
+    def randomDB(N,Et_min = None, Et_max = None, S_min = None, S_max = None, Nt = None):
         '''
         ---Doc---
             Description:

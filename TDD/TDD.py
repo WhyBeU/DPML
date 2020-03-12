@@ -26,7 +26,7 @@ def checkCell():
 def checkDefect():
     print("Test - Defect class")
     N = np.random.randint(100)
-    db = Defect.random_db(N)
+    db = Defect.randomDB(N)
     if len(db)!=N: print("Defect.random_db error")
     print("Test complete")
 def checkLTS():
@@ -38,10 +38,15 @@ def checkLTS():
     tausrh = lts.tauSRH
     breakAuger,tauAuger = lts.checkAuger()
     print("Test complete")
-# %%-
 
 # %%--  Run test function
 checkCell()
 checkDefect()
 checkLTS()
+# %%-
+
+
+# %%--  Other tests
+Logger.printTitle('t'*41)
+Logger.printDic({'sgdsdf':43,'erghegegrw':[5,6,7,8,],'test':'string'}, skipKeys=['test'])
 # %%-
