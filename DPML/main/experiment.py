@@ -3,6 +3,7 @@ from ..si import Cell,Defect,LTS
 from ..main import ML
 from ..utils.matplotlibstyle import *
 from ..utils import SaveObj, LoadObj
+from ..utils import Logger
 import numpy as np
 import os
 import warnings
@@ -76,6 +77,9 @@ class Experiment():
                 raise ValueError("No experimental file exists in %s"%(path))
     def saveExp(self, name=None):
         if name == None: name = self.parameters['name']
+        # if self.logML !=None:
+        #     for id,ML in self.logML:
+        #         savePath=
         self.updateLogbook('Experiment_saved_'+name)
         SaveObj(self,self.pathDic['objects'],'experimentObj_'+name+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
 
@@ -124,6 +128,7 @@ class Experiment():
             mlID = self.updateLogMLmodel(ml)
             ml.parameters['mlID'] =mlID
         self.updateLogbook('ML_loaded_ID'+ml.parameters['mlID']+"_from_"+filename)
+        if ml.logger !=None: ml.logger = Logger(ml.logger)
         return(ml)
 
     #****   simulation methods     ****#
@@ -152,6 +157,10 @@ class Experiment():
             col = [d.name,d.Et,d.Sn,d.Sp,d.k, np.log10(d.Sn),np.log10(d.Sp),np.log10(d.k),bandgap]
             skipDefect = False
             for c in cellDB:
+                if firstPass:
+                    for dn in self.parameters['dn_range']: columns_name.append("%sK_%.1Ecm-3_ %.0Ecm-3" % (c.T,c.Ndop,dn))
+                    skipDefect = True
+                    continue
                 if skipDefect: continue
                 s = LTS(c,d,self.parameters['dn_range'],noise=self.parameters['noise_model'], noiseparam=self.parameters['noise_parameter'])
                 if self.parameters['check_auger']:  #if break auger limit, discard defect
@@ -159,10 +168,9 @@ class Experiment():
                     if breakAuger: skipDefect=True
                 if skipDefect: continue
                 for t,dn in zip(s.tauSRH_noise,s.dnrange):
-                    if firstPass: columns_name.append("%sK_%.1Ecm-3_ %.0Ecm-3" % (c.T,c.Ndop,dn))
                     col.append(t)
+            firstPass = False
             if not skipDefect: ltsDB.append(col)
-            if not skipDefect: firstPass = False
             if skipDefect:  # if we skipped a defect, add a new random one to have n_defects in the database at the end
                 defectDB.append(Defect.randomDB(
                         N=1,

@@ -49,7 +49,8 @@ class ML():
         #   define hyper parameters for ML training
         self.dataset = Dataset.copy(deep=True)
         self.logTrain={}
-        self.pathDic['logfile']=self.pathDic['traces']datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+"_"+self.parameters['name']+".txt"
+        self.logger = None
+        self.pathDic['logfile']=self.pathDic['traces']+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+"_"+self.parameters['name']+".txt"
         if self.parameters['logML']: self.logger = Logger(self.pathDic['logfile'])
 
         #   Print header for logfile
@@ -63,6 +64,7 @@ class ML():
         if self.parameters['logML']: self.logger.close()
     def saveML(self, name=None):
         if name == None: name = self.parameters['name']
+        if self.logger != None: self.logger = self.logger.logfile
         SaveObj(self,self.pathDic['objects'],'mlObj_'+name+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     def updateParameters(self,Parameters):
         for key,value in Parameters.items():
@@ -74,7 +76,7 @@ class ML():
         trainParam={
             'validation_fraction': 0.01,    # validation dataset percentage
             'normalize': False,     # Wether or not to normalize the input data (True for NN)
-            'base_model': RandomForestRegressor(n_estimators=100, n_jobs=-1, verbose=2),
+            'base_model': RandomForestRegressor(n_estimators=100, n_jobs=-1, verbose=0),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
             'normalize': True,
@@ -168,7 +170,7 @@ class ML():
         trainParam={
             'validation_fraction': 0.01,    # validation dataset percentage
             'normalize': False,     # Wether or not to normalize the input data (True for NN)
-            'base_model': MLPClassifier((100,100),alpha=0.001, activation = 'relu', learning_rate='adaptive', verbose=2),
+            'base_model': MLPClassifier((100,100),alpha=0.001, activation = 'relu', learning_rate='adaptive', verbose=0),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
             'normalize': True,
