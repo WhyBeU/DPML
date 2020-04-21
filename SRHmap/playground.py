@@ -20,23 +20,25 @@ import datetime
 
 # %%--  Create one defect
 parameters={
+    # 'temperature':[200,250,300,350,400],
     'temperature':[200+T*10 for T in range(20)],
-    'dn_range':np.logspace(13,17,10),
+    'dn_range':np.logspace(13,17,11),
 }
 
-d = Defect(-0.33,1E-16,1E-16)
+d = Defect(0.33,1E-14,1E-15)
 c = Cell(T=300,Ndop=1E15,type='p')
 SRHmap = []
 for T in parameters['temperature']:
     lts = LTS(c.changeT(T),d,parameters['dn_range'])
     SRHmap.append(np.log10(lts.tauSRH))
 
-
-SRHmapImg = cv2.normalize(np.float32(SRHmap), None, alpha=0, beta=1,norm_type=cv2.NORM_MINMAX)
+SRHmapNorm = [[(256*(tau-parameters['log_tau_min'])/(parameters['log_tau_max']-parameters['log_tau_min'])) for tau in Tline] for Tline in SRHmap]
 SRHmapImg = cv2.resize(SRHmapImg, (32,32))
+cv2.imwrite('test.png',SRHmapImg)
+map = cv2.imread('test.png')
 
-plt.imshow(SRHmapImg)
-
+plt.imshow(SRHmap)
+plt.imshow(map)
 # %%-
 
 # %%--  Create multiple defect image
@@ -46,7 +48,7 @@ parameters={
 }
 
 
-db = Defect.randomDB(N=10)
+db = Defect.randomDB(N=1)
 c = Cell(T=300,Ndop=1E15,type='p')
 for d in db:
     SRHmap = []
@@ -56,20 +58,21 @@ for d in db:
 
 
     SRHmapImg = cv2.normalize(np.float32(SRHmap), None, alpha=0, beta=1,norm_type=cv2.NORM_MINMAX)
-    SRHmapImg = cv2.resize(SRHmapImg, (32,32))
+    SRHmapImg = cv2.resize(np.float32(SRHmapImg), (128,128))
 
-    plt.imshow(SRHmapImg)
+    plt.imshow(SRHmap)
     plt.title("%.2F ; %.2F"%(d.Et, np.log10(d.k)))
     plt.show()
+
 
 # %%-
 
 # %%--  Generate database and save data and csv with target
 start = datetime.datetime.now()
-SAVEDIR = "C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\07-Github-SRHmap\\dataset\\32-fix\\"
+SAVEDIR = "C:\\Users\\z5189526\\OneDrive - UNSW\\Yoann-Projects\\1-ML-based TIDLS Solver\\07-Github-SRHmap\\dataset\\128-fix-local\\"
 parameters={
-    'temperature':[200+T*10 for T in range(21)],
-    'dn_range':np.logspace(13,17,100),
+    'temperature':[200+T*200/128 for T in range(128)],
+    'dn_range':np.logspace(13,17,128),
     'type':'p',
     'log_tau_max':-1,   #   Max Tau for normalization
     'log_tau_min':-7,   #   Min tau for normalization
@@ -124,8 +127,8 @@ for d in db:
     imageDB.append(col)
 
     #   Normalize array
-    SRHmapNorm = [[(256*(tau-parameters['log_tau_min'])/(parameters['log_tau_max']-parameters['log_tau_min'])) for tau in Tline] for Tline in SRHmap]
-    SRHmapImg = cv2.resize(np.float32(SRHmapNorm), (32,32))
+    SRHmapNorm = [[(256*(tau-np.min(SRHmap))/(np.max(SRHmap)-np.min(SRHmap))) for tau in Tline] for Tline in SRHmap]
+    SRHmapImg = cv2.resize(np.float32(SRHmapNorm), (128,128))
     cv2.imwrite(filename,SRHmapImg)
 
 imageDB = pd.DataFrame(imageDB)
