@@ -91,7 +91,6 @@ plt.show()
 
 # %%-
 
-ml.logTrain['logk_all']['results']
 # %%--  Train machine learning algorithms
 # exp = Experiment.loadExp(SAVEDIR+"objects\\")
 ml = exp.newML()
