@@ -7,5 +7,5 @@ setup(
     packages=['DPML',],
     license='  GNU GENERAL PUBLIC LICENSE',
     description="Machine learning assisted extraction of defect parameters",
-    long_description=open('README.txt').read(),
+    long_description=open('README.md').read(),
 )
