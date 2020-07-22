@@ -79,7 +79,6 @@ class ML():
             'base_model': RandomForestRegressor(n_estimators=100, n_jobs=-1, verbose=0),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
-            'normalize': True,
             }
         if trainParameters!=None:
             for key in trainParameters.keys(): trainParam[key]=trainParameters[key]
@@ -175,7 +174,6 @@ class ML():
             'base_model': MLPClassifier((100,100),alpha=0.001, activation = 'relu', learning_rate='adaptive', verbose=0),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
-            'normalize': True,
             }
         if trainParameters!=None:
             for key in trainParameters.keys(): trainParam[key]=trainParameters[key]
