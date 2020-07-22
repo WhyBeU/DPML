@@ -30,7 +30,17 @@ class ML():
 
     #****   Core methods      ****#
     def __init__(self, Dataset, SaveDir, Parameters=None):
-
+        '''
+        ---Doc---
+            Description:
+                Initialize ml object with passed or default parameters
+            Inputs:
+                Dataset     object      Dataset used for training
+                SaveDir     string      Folder path to save the data if parameters['save'] is true
+                Parameters  dicitionary Force or overwrite default parameters
+            Outputs:
+                None
+        '''
         #   Use default if not defined
         self.parameters=ML.DefaultParameters
         if Parameters is not None: self.updateParameters(Parameters)
@@ -63,19 +73,47 @@ class ML():
         Logger.printDic(self.pathDic)
         if self.parameters['logML']: self.logger.close()
     def saveML(self, name=None):
+        '''
+        ---Doc---
+            Description:
+                Save ml object with pickle
+            Inputs:
+                name     string      Overwrite filename
+            Outputs:
+                None
+        '''
         if name == None: name = self.parameters['name']
         if self.logger != None: self.logger = self.logger.logfile
         SaveObj(self,self.pathDic['objects'],'mlObj_'+name+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     def updateParameters(self,Parameters):
+        '''
+        ---Doc---
+            Description:
+                update parameters dicitionary
+            Inputs:
+                Parameters  dicitionary Parameters to overwrite
+            Outputs:
+                None
+        '''
         for key,value in Parameters.items():
             self.parameters[key]=value
 
     #****   ML methods      ****#
     def trainRegressor(self, targetCol, trainParameters=None):
+        '''
+        ---Doc---
+            Description:
+                training pipeline for regressors. Data and results are stored on the ML object
+            Inputs:
+                targetCol       string      column name of the dataframe to predict
+                trainParameters dicitionary training parameters to overwrite
+            Outputs:
+                None
+        '''
         #   define and update training parameters:
         trainParam={
             'validation_fraction': 0.01,    # validation dataset percentage
-            'normalize': False,     # Wether or not to normalize the input data (True for NN)
+            'normalize': True,     # Wether or not to normalize the input data (True for NN)
             'base_model': RandomForestRegressor(n_estimators=100, n_jobs=-1, verbose=0),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
@@ -167,10 +205,20 @@ class ML():
         dfVal_output['predicted'] = predVal
         self.logTrain[trainKey]['validation_data']= dfVal_output
     def trainClassifier(self, targetCol, trainParameters=None):
+        '''
+        ---Doc---
+            Description:
+                training pipeline for classifiers. Data and results are stored on the ML object
+            Inputs:
+                targetCol       string      column name of the dataframe to classify
+                trainParameters dicitionary training parameters to overwrite
+            Outputs:
+                None
+        '''
         #   define and update training parameters:
         trainParam={
             'validation_fraction': 0.01,    # validation dataset percentage
-            'normalize': False,     # Wether or not to normalize the input data (True for NN)
+            'normalize': True,     # Wether or not to normalize the input data (Must be True for NN)
             'base_model': MLPClassifier((100,100),alpha=0.001, activation = 'relu', learning_rate='adaptive', verbose=0),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
@@ -273,6 +321,16 @@ class ML():
 
     #****   Plotting methods      ****#
     def plotRegressor(self,trainKey, plotParameters=None):
+        '''
+        ---Doc---
+            Description:
+                plot true vs predicted on the validation dataset post training
+            Inputs:
+                trainKey        string      training results to plot
+                plotParameters  dicitionary plotting parameters to overwrite
+            Outputs:
+                None
+        '''
         if self.logTrain[trainKey]['prediction_type'] != 'regression': raise ValueError('Wrong prediction type')
         plotParam={
             'figsize':(8,8),
@@ -305,10 +363,30 @@ class ML():
         if plotParam['save']:   plt.savefig(self.pathDic['figures']+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")+"Reg_"+trainKey+".png",transparent=True,bbox_inches='tight')
         plt.show()
     def printConfusionMatrix(self,trainKey, printParameters=None):
+        '''
+        ---Doc---
+            Description:
+                function to print out confusion matrix if it exists
+            Inputs:
+                trainKey        string      training to print
+                printParameters dicitionary print parameters to overwrite
+            Outputs:
+                None
+        '''
         if self.logTrain[trainKey]['prediction_type'] != 'classification': raise ValueError('Wrong prediction type')
         print(self.logTrain[trainKey]['confusion_matrix'])
         print('\n')
     def printClassificationReport(self,trainKey,printParameters=None):
+        '''
+        ---Doc---
+            Description:
+                function to print out classification report if it exists
+            Inputs:
+                trainKey        string      training to print
+                printParameters dicitionary print parameters to overwrite
+            Outputs:
+                None
+        '''
         if self.logTrain[trainKey]['prediction_type'] != 'classification': raise ValueError('Wrong prediction type')
         print(self.logTrain[trainKey]['classification_report'])
         print('\n')
