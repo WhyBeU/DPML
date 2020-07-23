@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='DPML',
-    version='0.1dev',
+    version='1.0',
     author='Yoann Buratti',
     packages=['DPML',],
     license='  GNU GENERAL PUBLIC LICENSE',
