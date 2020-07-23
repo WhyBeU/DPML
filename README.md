@@ -1,4 +1,4 @@
-# DPML - Defect Parameter Extraction through Machine Learning
+# Defect Parameter extraction through Machine Learning
 
 Package containing python source code for machine learning extraction of defect parameters from experimental files.
 Follow instructions from python files in example folder on how to use the package.
