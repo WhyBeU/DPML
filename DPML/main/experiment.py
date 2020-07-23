@@ -34,6 +34,16 @@ class Experiment():
 
     #****   general methods     ****#
     def __init__(self,SaveDir,Parameters=None):
+        '''
+        ---Doc---
+            Description:
+                Initialize exp object with passed or default parameters
+            Inputs:
+                SaveDir     string      Folder path to save the data if parameters['save'] is true
+                Parameters  dicitionary Force or overwrite default parameters
+            Outputs:
+                None
+        '''
         #   Check applicability of method
         if not os.path.exists(SaveDir): raise ValueError('%s does not exists'%(SaveDir))
 
@@ -56,6 +66,15 @@ class Experiment():
         self.logML = None
         if Parameters is not None: self.updateParameters(Parameters)
     def loadExp(path,filename=None):
+        '''
+        ---Doc---
+            Description:
+                Load exp object. If no filename is passed, will loaded latest from saveDir
+            Inputs:
+                filename    string      file name to load in SaveDir
+            Outputs:
+                exp     Object
+        '''
         if filename != None:
             exp = LoadObj(path,filename)
             exp.updateLogbook('Experiment_loaded_'+filename)
@@ -76,6 +95,15 @@ class Experiment():
             else:
                 raise ValueError("No experimental file exists in %s"%(path))
     def saveExp(self, name=None):
+        '''
+        ---Doc---
+            Description:
+                Save exp object with pickle
+            Inputs:
+                name    string  Overwrite filename
+            Outputs:
+                None
+        '''
         if name == None: name = self.parameters['name']
         # if self.logML !=None:
         #     for id,ML in self.logML:
@@ -85,6 +113,16 @@ class Experiment():
 
     #****   machine learning methods     ****#
     def newML(self, datasetID=None, mlParameters=None):
+        '''
+        ---Doc---
+            Description:
+                Define new ML object based on parameters from the experiment
+            Inputs:
+                datasetID       string      Overwrite which dataset to use from logDataset
+                mlParameters    dicitionary Overwrite ml parameters for object creation
+            Outputs:
+                mlID     string mlID of newly created object
+        '''
         if self.logDataset == None : raise ValueError("Experiment doesn't have simulated data.")
         if datasetID==None: datasetID = str(len(self.logDataset)-1) # use latest if not defined
         if not isinstance(datasetID,str): datasetID = str(datasetID)
@@ -106,6 +144,15 @@ class Experiment():
         self.updateLogbook('ML_model_created_ID'+mlID+"_"+ml.parameters['name'])
         return(self.logML[mlID])
     def loadML(self, filename=None):
+        '''
+        ---Doc---
+            Description:
+                Load ml object. If no filename is passed, will loaded latest from saveDir
+            Inputs:
+                filename    string      file name to load in SaveDir
+            Outputs:
+                ml     Object
+        '''
         if filename != None:
             ml = LoadObj(self.pathDic['objects'],filename)
         else:   # if no filename provided, take the latest one, if none exists, raise error.
@@ -131,7 +178,16 @@ class Experiment():
         if ml.logger !=None: ml.logger = Logger(ml.logger)
         return(ml)
     def predictML(self, mlIDs = None, header = None):
-        #   Check for applicabiliy
+        '''
+        ---Doc---
+            Description:
+                Apply ml object regressor and classifier to experimental data and save results locally
+            Inputs:
+                mlIDs   array      list of mlID string to use for prediction. All by defaultself.
+                header  array       column names of predicted value to scale
+            Outputs:
+                None
+        '''        #   Check for applicabiliy
         if mlIDs == None: mlIDs = [str(i) for i in range(len(self.logML))]
         if header == None: header = ['Et_eV','Sn_cm2','Sp_cm2','k','logSn','logSp','logk']
         self.predictCsv = {}
@@ -169,6 +225,15 @@ class Experiment():
 
     #****   simulation methods     ****#
     def generateDB(self):
+        '''
+        ---Doc---
+            Description:
+                Generate defect database, from object parameters. Each database generated will have a separate id.
+            Inputs:
+                None
+            Outputs:
+                None
+        '''
         # Generate Random defect database
         defectDB=Defect.randomDB(
             N=self.parameters['n_defects'],
@@ -228,8 +293,15 @@ class Experiment():
         #   Log change
         self.updateLogbook('lifetime_database_generated_ID'+ltsID)
     def interpolateSRH(self):
-        #   Check applicability of method
-
+        '''
+        ---Doc---
+            Description:
+                After loading experimental data, linearize and interpolates SRH curves
+            Inputs:
+                None
+            Outputs:
+                None
+        '''
         #   For each SRH curve, linearize and interpolate on dn_range
         for key, curve in self.expDic.items():
             c = curve['cell']
@@ -241,6 +313,18 @@ class Experiment():
         #   Log change
         self.updateLogbook('interpolated')
     def loadCSV(self,FilePath, Temperature, Doping, Type):
+        '''
+        ---Doc---
+            Description:
+                Load csv file of experimental data and prep data. Specify experimental condition with Temperature, Doping and Type
+            Inputs:
+                FilePath    string  .csv file where data is stored. use sample.csv for formatting
+                Temperature array   array of temperatures used in measurements
+                Doping      array   array of doping used in measurements. Need to be the same length as Temperature
+                Type        string  n or p type
+            Outputs:
+                None
+        '''
         #   Check applicability of method
         if not os.path.exists(FilePath): raise ValueError('%s does not exists'%(FilePath))
         if '.csv' not in FilePath: raise ValueError('%s is not a csv file'%(FilePath))
@@ -272,6 +356,15 @@ class Experiment():
         #   Log change
         self.updateLogbook('csv_loaded')
     def loadLTS(self, filename=None):
+        '''
+        ---Doc---
+            Description:
+                load previously generated lifetime data
+            Inputs:
+                filename    string      file name to load in SaveDir
+            Outputs:
+                None
+        '''
         if filename != None:
             ltsDF = LoadObj(self.pathDic['objects'],filename)
             ltsID = self.updateLogDataset(ltsDF)
@@ -294,6 +387,16 @@ class Experiment():
 
     #****   plotting methods     ****#
     def plotSRH(self,toPlot=None, plotParameters=None):
+        '''
+        ---Doc---
+            Description:
+                plot SRH lifetime curve and/or interpolated SRH curves
+            Inputs:
+                toPlot          array      list of options to plot
+                plotParameters  dicitionary plotting parameters to overwrite
+            Outputs:
+                None
+        '''
         #   Check applicability of method
         if toPlot==None:
             toPlot=[]
@@ -343,12 +446,30 @@ class Experiment():
 
     #****   exporting methods     ****#
     def exportDataset(self,filename=None):
+        '''
+        ---Doc---
+            Description:
+                Convert datasets used into csv files
+            Inputs:
+                name    string  Overwrite filename
+            Outputs:
+                None
+        '''
         if filename == None: filename = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+"_"+self.parameters['name']
         for key, dataset in self.logDataset.items():
             filename_temp=filename+"_datasetID_"+key+".csv"
             dataset.to_csv(self.pathDic['outputs']+filename_temp,encoding='utf-8', index=False)
         self.updateLogbook('dataset_exported')
     def exportValidationset(self,filename=None):
+        '''
+        ---Doc---
+            Description:
+                Convert validation datasets used into csv files
+            Inputs:
+                name    string  Overwrite filename
+            Outputs:
+                None
+        '''
         if filename == None: filename = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+"_"+self.parameters['name']
         for mlID, ml in self.logML.items():
             for trainKey, trainLog in ml.logTrain.items():
@@ -358,11 +479,38 @@ class Experiment():
 
     #****   updating methods      ****#
     def updateParameters(self,Parameters):
+        '''
+        ---Doc---
+            Description:
+                update objects parameter dicitionary
+            Inputs:
+                Parameters  dicitionary     parameters to overwrite
+            Outputs:
+                None
+        '''
         for key,value in Parameters.items():
             self.parameters[key]=value
     def updateLogbook(self,logItem):
+        '''
+        ---Doc---
+            Description:
+                update logbook with item and timestamp
+            Inputs:
+                logItem  string item name to add to logbook
+            Outputs:
+                None
+        '''
         self.logbook[logItem]=datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
     def updateLogDataset(self,logItem):
+        '''
+        ---Doc---
+            Description:
+                update dataset log with dataset
+            Inputs:
+                logItem  string item name to add to log
+            Outputs:
+                id  string  highest id found in log
+        '''
         if self.logDataset==None:
             self.logDataset={"0":logItem}
             id = "0"
@@ -375,6 +523,16 @@ class Experiment():
                 self.logDataset[id]=logItem
         return(id)
     def updateLogMLmodel(self,logItem,logID=None):
+        '''
+        ---Doc---
+            Description:
+                update dataset log with ML model
+            Inputs:
+                logItem  string item name to add to log
+                logID    string overwrite logID to use
+            Outputs:
+                id  string  highest id found in log
+        '''
         if self.logML==None:
             self.logML={"0":logItem}
             id = "0"

@@ -1,11 +1,8 @@
 "Get attributes and print all attributes"
-# import dill as pickle
-# from getpass import getpass
-# pwd = getpass("Insert password: ")
-# del getpass
 import pickle
 
 def PrintSelf(obj):
+    """Print out objects attribute"""
     for attr in dir(obj):
         if not attr.startswith("__"):
             value = getattr(obj, attr)
@@ -13,6 +10,7 @@ def PrintSelf(obj):
                 print(str(attr)+" : "+str(value))
 
 def SaveObj(obj, folder, name):
+    """Save python object using pickle"""
     if '.pkl' in name:
         with open(folder + name, 'rb') as f:
             pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
@@ -21,6 +19,7 @@ def SaveObj(obj, folder, name):
             pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
 def LoadObj(folder, name):
+    """Load python object using pickle"""
     if '.pkl' in name:
         with open(folder + name, 'rb') as f:
             return pickle.load(f)
