@@ -29,8 +29,8 @@ import numpy as np
 # %%-
 
 # %%--  Inputs
-SAVEDIR = "C:\\Users\\z5189526\\Documents\\GitHub\\DPML\\savedir_example\\"
-FILEPATH = "C:\\Users\\z5189526\\Documents\\GitHub\\DPML\\example\\sample.csv"
+SAVEDIR = "DPML\\savedir_example\\"
+FILEPATH = "DPML\\example\\sample.csv"
 TEMPERATURE = [227.3,251.8,275.8,301.4,320.5,344.3,367.9,391.3]
 DOPING = [5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15]
 WAFERTYPE = 'n'
