@@ -33,7 +33,7 @@ from sklearn.neural_network import MLPClassifier, MLPRegressor
 # %%-
 
 # %%--  Inputs
-SAVEDIR = "C:\\Users\\z5189526\\Documents\\GitHub\\DPML\\savedir_example\\"
+SAVEDIR = "DPML\\savedir_example\\"
 TEMPERATURE = [200,250,300,350,400]
 DOPING = [1e15,1e15,1e15,1e15,1e15]
 WAFERTYPE = 'p'
