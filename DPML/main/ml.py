@@ -185,8 +185,8 @@ class ML():
             "training_time": "{:.2f} s".format(training_end_time-training_start_time),
             "training_r2": "{:.3f}".format(r2_score(actTrain,predTrain)),
             "validation_r2": "{:.3f}".format(r2_score(actVal,predVal)),
-            "training_rmse":"{:.2e}".format(mean_squared_error(actTrain,predTrain,squared=False)),
-            "validation_rmse":"{:.2e}".format(mean_squared_error(actVal,predVal,squared=False)),
+            "training_rmse":"{:.2e}".format(np.sqrt(mean_squared_error(actTrain,predTrain))),
+            "validation_rmse":"{:.2e}".format(np.sqrt(mean_squared_error(actVal,predVal))),
         }
 
         #   Log results
