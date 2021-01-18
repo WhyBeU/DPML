@@ -25,12 +25,13 @@ import numpy as np
     There are hidden parameters that can be specified in most functions, they
     use by the default the class-defined parameters
     Not executing the functions in the correct order can results in errors.
+    Comment or uncomment load and save point as required.
 '''
 # %%-
 
 # %%--  Inputs
-SAVEDIR = "DPML\\savedir_example\\"
-FILEPATH = "DPML\\example\\sample.csv"
+SAVEDIR = "savedir_example\\"
+FILEPATH = "example\\sample.csv"
 TEMPERATURE = [227.3,251.8,275.8,301.4,320.5,344.3,367.9,391.3]
 DOPING = [5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15]
 WAFERTYPE = 'n'
