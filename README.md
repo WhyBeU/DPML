@@ -4,7 +4,7 @@ Package containing python source code for machine learning extraction of defect 
 Follow instructions from python files in example folder on how to use the package.
 More information about the process can be found in the following paper: https://www.nature.com/articles/s41524-020-00410-7
 
-Cite as : 
+Cite as :
 *Buratti, Y., Le Gia, Q. T., Dick, J., Zhu, Y. & Hameiri, Z. Extracting bulk defect parameters in silicon wafers using machine learning models. npj Computational Materials 6, 1–8 (2020)*
 
 Related work:
@@ -13,7 +13,7 @@ Related work:
 
 ##  Requirements
 Written in python 3.x
-Install semiconductor package from https://github.com/MK8J
+Install semiconductor package from https://github.com/MK8J/semiconductor
 Other packages needed:
   * numpy
   * pandas
@@ -21,3 +21,4 @@ Other packages needed:
   * scipy
   * sklearn
   * pickle
+  * PyYAML
