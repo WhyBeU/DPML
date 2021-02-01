@@ -14,11 +14,16 @@ Related work:
 *Buratti, Y., Dick, J., Gia, Q. L. & Hameiri, Z. A machine learning approach to defect parameters extraction: using random forests to inverse the Shockley-Read-Hall equation. in 46th IEEE Photovoltaic Specialist Conference 4 (2019)*
 
 
-##  Requirements
-Written in python 3.x
-Install semiconductor package from https://github.com/MK8J/semiconductor
-(Download and copy/paste in your lib/site-package)
-Other packages needed:
+##  Installation
+1/ Have Python 3.6+ installed (https://www.python.org/downloads/)
+
+2/ Download the semiconductor package (https://github.com/MK8J/semiconductor)
+
+3/ Move the semiconductor package in your Python\Python3X\Lib\site-packages\ (where you installed python)
+
+4/ Open a command terminal and type : pip install DPML
+
+This sill install all the other packages needed:
   * numpy
   * pandas
   * matplotlib
@@ -26,3 +31,5 @@ Other packages needed:
   * sklearn
   * pickle
   * ruamel_yaml
+
+5/ Download exmaples files from this repo, or write your own!
