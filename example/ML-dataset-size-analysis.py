@@ -2,7 +2,9 @@
 #---    Initialization
 #///////////////////////////////////////////
 # %%--  Imports
-from DPML import *
+from DPML.si import *
+from DPML.main import *
+from DPML.utils import *
 import numpy as np
 from DPML.utils.matplotlibstyle import *
 import matplotlib.pyplot as plt

@@ -2,7 +2,9 @@
 #---    Initialization
 #///////////////////////////////////////////
 # %%--  Imports
-from DPML import *
+from DPML.si import *
+from DPML.main import *
+from DPML.utils import *
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor

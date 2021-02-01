@@ -2,7 +2,9 @@
 #---    Initialization
 #///////////////////////////////////////////
 # %%--  Imports
-from DPML import *
+from DPML.si import *
+from DPML.main import *
+from DPML.utils import *
 import numpy as np
 # %%-
 
@@ -41,7 +43,7 @@ NAME = 'Example github'
 # %%--  Hyper-parameters
 PARAMETERS = {
     'name': NAME,
-    'save': True,   # True to save a copy of the printed log, the outputed model and data
+    'save': False,   # True to save a copy of the printed log, the outputed model and data
     'logML':True,   #   Log the output of the console to a text file
     'n_defects': 2000, # Size of simulated defect data set for machine learning
     'dn_range' : np.logspace(13,17,100),# Number of points to interpolate the curves on
