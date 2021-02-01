@@ -17,6 +17,7 @@ Related work:
 ##  Requirements
 Written in python 3.x
 Install semiconductor package from https://github.com/MK8J/semiconductor
+(Download and copy/paste in your lib/site-package)
 Other packages needed:
   * numpy
   * pandas
@@ -24,4 +25,4 @@ Other packages needed:
   * scipy
   * sklearn
   * pickle
-  * PyYAML
+  * ruamel_yaml
