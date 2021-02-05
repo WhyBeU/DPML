@@ -32,4 +32,4 @@ This sill install all the other packages needed:
   * pickle
   * ruamel_yaml
 
-5/ Download exmaples files from this repo, or write your own!
+5/ Download examples files from this repo, or write your own!
