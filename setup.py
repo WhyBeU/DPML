@@ -1,8 +1,4 @@
 # Always prefer setuptools over distutils
-#   Once done - run python setup.py sdist bdist_wheel
-# then
-# twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
-# Username : WhyBeU ; Pass: GIT@XX
 from setuptools import setup, find_packages
 import pathlib
 
@@ -34,7 +30,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.2',  # Required
+    version='1.0.3',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
