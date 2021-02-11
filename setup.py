@@ -64,7 +64,7 @@ setup(
     # This field corresponds to the "Home-Page" metadata field:
     # https://packaging.python.org/specifications/core-metadata/#home-page-optional
     url='https://github.com/WhyBeU/DPML',  # Optional
-
+    download_url="https://github.com/WhyBeU/DPML/archive/1.1.tar.gz"
     # This should be your name or the name of the organization which owns the
     # project.
     author='Yoann Buratti',  # Optional
