@@ -1,6 +1,0 @@
-scikit-learn
-numpy
-pandas
-scipy
-matplotlib
-ruamel_yaml
