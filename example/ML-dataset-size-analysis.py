@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 # %%-
 
 # %%--  Inputs
-SAVEDIR = "DPML\\savedir_example\\"
+SAVEDIR = "savedir_example\\"
 TEMPERATURE = [200,250,300,350,400]
 DOPING = [1e15,1e15,1e15,1e15,1e15]
 WAFERTYPE = 'p'
@@ -49,6 +49,7 @@ PARAMETERS = {
     'dn_range' : np.logspace(13,17,100),# Number of points to interpolate the curves on
     'classification_training_keys': ['bandgap_all'], # for parameter prediction
     'regression_training_keys': ['logk_all'], # for parameter prediction
+    'non-feature_col':['Name', 'Et_eV', 'Sn_cm2', 'Sp_cm2', 'k', 'logSn', 'logSp', 'logk', 'bandgap'] # columns to remove from dataframe in ML training
 }
 # %%-
 
@@ -71,7 +72,8 @@ for N in RANGE:
     ml = exp.newML()
     for trainKey in exp.parameters['regression_training_keys']:
         targetCol, bandgapParam = trainKey.rsplit('_',1)
-        ml.trainRegressor(targetCol=targetCol, trainParameters={'bandgap':bandgapParam,'validation_fraction': 0.2})
+        param={'bandgap':bandgapParam,'non-feature_col':PARAMETERS['non-feature_col'],'validation_fraction': 0.2}
+        ml.trainRegressor(targetCol=targetCol, trainParameters=param)
         TIME.append(float(ml.logTrain[trainKey]['results']['training_time'].split()[0]))
         SCORE.append(float(ml.logTrain[trainKey]['results']['validation_r2'].split()[0]))
 
@@ -106,21 +108,7 @@ ax.set_xlabel(plotParam['xlabel'])
 ax.set_ylabel(plotParam['ylabel'])
 # ax.set_ylim(bottom=0)
 ax.semilogx()
-ax.set_title("Random Forest k prediction", fontsize=14)
+ax.set_title(exp.parameters['regression_training_keys'], fontsize=14)
 ax.scatter(RANGE,SCORE)
 plt.show()
-# %%-
-
-# %%--  Train machine learning algorithms
-# exp = Experiment.loadExp(SAVEDIR+"objects\\")
-ml = exp.newML()
-for trainKey in exp.parameters['regression_training_keys']:
-    targetCol, bandgapParam = trainKey.rsplit('_',1)
-    ml.trainRegressor(targetCol=targetCol, trainParameters={'bandgap':bandgapParam})
-for trainKey in exp.parameters['classification_training_keys']:
-    targetCol, bandgapParam = trainKey.rsplit('_',1)
-    ml.trainClassifier(targetCol=targetCol, trainParameters={'bandgap':bandgapParam})
-for trainKey in exp.parameters['regression_training_keys']: ml.plotRegressor(trainKey, plotParameters={'scatter_c':'black'})
-# ml.saveML()
-# exp.saveExp()
 # %%-

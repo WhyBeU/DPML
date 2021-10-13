@@ -35,7 +35,7 @@ from sklearn.neural_network import MLPClassifier, MLPRegressor
 # %%-
 
 # %%--  Inputs
-SAVEDIR = "DPML\\savedir_example\\"
+SAVEDIR = "savedir_example\\"
 TEMPERATURE = [200,250,300,350,400]
 DOPING = [1e15,1e15,1e15,1e15,1e15]
 WAFERTYPE = 'p'
@@ -62,10 +62,11 @@ PARAMETERS = {
     'name': NAME,
     'save': False,   # True to save a copy of the printed log, the outputed model and data
     'logML': False,   #   Log the output of the console to a text file
-    'n_defects': 10000, # Size of simulated defect data set for machine learning
+    'n_defects': 1000, # Size of simulated defect data set for machine learning
     'dn_range' : np.logspace(13,17,100),# Number of points to interpolate the curves on
     'classification_training_keys': ['bandgap_all'], # for  prediction
     'regression_training_keys': ['Et_eV_upper','Et_eV_lower','logk_all'], # for prediction
+    'non-feature_col':['Name', 'Et_eV', 'Sn_cm2', 'Sp_cm2', 'k', 'logSn', 'logSp', 'logk', 'bandgap'] # columns to remove from dataframe in ML training
 }
 # %%-
 
@@ -76,30 +77,26 @@ PARAMETERS = {
 exp = Experiment(SaveDir=SAVEDIR, Parameters=PARAMETERS)
 exp.updateParameters({'type':WAFERTYPE,'temperature':TEMPERATURE,'doping':DOPING})
 exp.generateDB()
-# exp.saveExp()
 # %%-
 
 # %%--  Train machine learning algorithms loop
-# exp = Experiment.loadExp(SAVEDIR+"objects\\")
 for modelName,model in ML_REGRESSION_PIPELINE.items():
     ml = exp.newML(mlParameters={'name':exp.parameters['name']+"_"+modelName})
     for trainKey in exp.parameters['regression_training_keys']:
         targetCol, bandgapParam = trainKey.rsplit('_',1)
-        ml.trainRegressor(targetCol=targetCol, trainParameters={'bandgap':bandgapParam,'base_model':model})
+        param={'bandgap':bandgapParam,'non-feature_col':PARAMETERS['non-feature_col'],'base_model':model}
+        ml.trainRegressor(targetCol=targetCol, trainParameters=param)
         ml.plotRegressor(trainKey, plotParameters={'scatter_c':'black'})
 for modelName,model in ML_CLASSIFICATION_PIPELINE.items():
     ml = exp.newML(mlParameters={'name':exp.parameters['name']+"_"+modelName})
     for trainKey in exp.parameters['classification_training_keys']:
         targetCol, bandgapParam = trainKey.rsplit('_',1)
-        ml.trainClassifier(targetCol=targetCol, trainParameters={'bandgap':bandgapParam,'base_model':model})
+        param={'bandgap':bandgapParam,'non-feature_col':PARAMETERS['non-feature_col'],'base_model':model}
+        ml.trainClassifier(targetCol=targetCol, trainParameters=param)
 
-# exp.saveExp()
 # %%-
 
 # %%--  Export data
-# exp = Experiment.loadExp(SAVEDIR+"objects\\")
-# ml = exp.loadML()
 exp.exportDataset()
 exp.exportValidationset()
-# exp.saveExp()
 # %%-
