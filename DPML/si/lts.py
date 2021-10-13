@@ -1,5 +1,6 @@
 import numpy as np
 import warnings
+from decimal import Decimal
 
 class LTS():
     #****   Constant declaration    ****#
@@ -31,18 +32,24 @@ class LTS():
         self.cell = cell
         self.defect = defect
         self.dnrange = dnrange
-        self.n1 = self.cell.ni*np.exp(self.defect.Et/(self.cell.kb*self.cell.T))
-        self.p1 = self.cell.ni*np.exp(-self.defect.Et/(self.cell.kb*self.cell.T))
-        self.taun0 = 1/(self.defect.Sn * self.cell.Vn*self.defect.Nt)
-        self.taup0 = 1/(self.defect.Sp * self.cell.Vp*self.defect.Nt)
-        self.tauSRH = [(self.taun0*(self.cell.p0+self.p1+dn)+self.taup0*(self.cell.n0+self.n1+dn))/(self.cell.n0+self.cell.p0+dn) for dn in self.dnrange]
+        self.n1 = float(Decimal(self.cell.ni)*np.exp(Decimal(self.defect.Et/(self.cell.kb*self.cell.T))))
+        self.p1 = float(Decimal(self.cell.ni)*np.exp(Decimal(-self.defect.Et/(self.cell.kb*self.cell.T))))
+        self.taun0 = float(1/(Decimal(self.defect.Sn) * Decimal(self.cell.Vn)*Decimal(self.defect.Nt)))
+        self.taup0 = float(1/(Decimal(self.defect.Sp) * Decimal(self.cell.Vp)*Decimal(self.defect.Nt)))
+        self.tauSRH = [float((Decimal(self.taun0)*(Decimal(self.cell.p0)+Decimal(self.p1)+Decimal(dn))+Decimal(self.taup0)*(Decimal(self.cell.n0)+Decimal(self.n1)+Decimal(dn)))/(Decimal(self.cell.n0)+Decimal(self.cell.p0)+Decimal(dn))) for dn in self.dnrange]
+        # self.n1 = self.cell.ni*np.exp(self.defect.Et/(self.cell.kb*self.cell.T))
+        # self.p1 = self.cell.ni*np.exp(-self.defect.Et/(self.cell.kb*self.cell.T))
+        # self.taun0 = 1/(self.defect.Sn * self.cell.Vn*self.defect.Nt)
+        # self.taup0 = 1/(self.defect.Sp * self.cell.Vp*self.defect.Nt)
+        # self.tauSRH = [(self.taun0*(self.cell.p0+self.p1+dn)+self.taup0*(self.cell.n0+self.n1+dn))/(self.cell.n0+self.cell.p0+dn) for dn in self.dnrange]
 
         #   Add noise
         self.noisemodel=noise
         self.noiseparam=noiseparam
         if self.noisemodel=="logNorm":
             noise = np.random.normal(0,noiseparam,len(dnrange))
-            self.tauSRH_noise = [t*(1+e*np.log(np.max(self.dnrange)/dn)) for t,e,dn in zip(self.tauSRH,noise,self.dnrange)]
+            self.tauSRH_noise = [float(Decimal(t)*(Decimal(1)+Decimal(e*np.log(np.max(self.dnrange)/dn)))) for t,e,dn in zip(self.tauSRH,noise,self.dnrange)]
+            # self.tauSRH_noise = [t*1+e*np.log(np.max(self.dnrange)/dn) for t,e,dn in zip(self.tauSRH,noise,self.dnrange)]
             self.noisemodel="logNorm"
             self.noiseparam=noiseparam
         else:
@@ -56,11 +63,6 @@ class LTS():
                 Radiative contants from Altermat et al [2005] - DOI 10.1109/NUSOD.2005.1518128 and Trupke et al [2003] - DOI 10.1063/1.1610231
 
             Inputs:
-                cell        object      Cell object previously created
-                defect      object      Defect object previously created
-                dnrange     array       Excess carrier concentration values at which to simulate data
-                noise       String      Define which noise model to used
-                noiseparam  float       hyper-parameter for noise level
 
             Outputs:
                 breakAuger  boolean     True if lifetime is higher than Auger limit at any carrier concentration
@@ -88,3 +90,5 @@ class LTS():
             if tauAuger[i]<self.tauSRH[i]: breakAuger=True
 
         return(breakAuger,tauAuger)
+    def __repr__(self):
+        return f'{self.__class__.__name__}('f'{self.cell!r}, {self.defect!r}, dnrange([{np.min(self.dnrange)},{np.max(self.dnrange)}]))'
