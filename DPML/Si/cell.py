@@ -124,3 +124,5 @@ class Cell():
                 >>  cell2 = Cell(T = 300, Ndop = 1e15, type="p").changeNdop(1e16)
         '''
         return Cell(self.T,Ndop,self.type)
+    def __repr__(self):
+        return f'{self.__class__.__name__}('f'{self.T!r}, {self.Ndop!r}, {self.type!r})'
