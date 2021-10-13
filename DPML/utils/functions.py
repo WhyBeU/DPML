@@ -26,3 +26,14 @@ def LoadObj(folder, name):
     else:
         with open(folder + name + '.pkl', 'rb') as f:
             return pickle.load(f)
+def recur_items(dictionary,nest):
+    for key, value in dictionary.items():
+        if type(value) is dict:
+            yield (key,nest)
+            yield from recur_items(value,nest+1)
+        else:
+            yield (key,nest)
+
+def print_dic(dic,nest=0):
+    for key,nest in recur_items(dic,0):
+        print("\t"*nest,key)
