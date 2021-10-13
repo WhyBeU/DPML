@@ -114,9 +114,11 @@ class ML():
         trainParam={
             'validation_fraction': 0.01,    # validation dataset percentage
             'normalize': True,     # Wether or not to normalize the input data (True for NN)
-            'base_model': RandomForestRegressor(n_estimators=100, n_jobs=-1, verbose=0),
+            'base_model': RandomForestRegressor(n_estimators=128, n_jobs=-1, verbose=1),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
+            'non-feature_col':["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap','CMn','CPn','CMp','CPp'],
+            #["Name","Et_eV_1","Sn_cm2_1","Sp_cm2_1",'k_1','logSn_1','logSp_1','logk_1','bandgap_1',"Et_eV_2","Sn_cm2_2","Sp_cm2_2",'k_2','logSn_2','logSp_2','logk_2','bandgap_2']
             }
         if trainParameters!=None:
             for key in trainParameters.keys(): trainParam[key]=trainParameters[key]
@@ -129,7 +131,7 @@ class ML():
         }
         dfAll =  self.dataset.copy(deep=True)
         for col in self.dataset.columns:
-            if col not in ["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap']: dfAll[col]=np.log10(dfAll[col])
+            if col not in trainParam['non-feature_col']: dfAll[col]=np.log10(dfAll[col])
 
         #   Log parameters
         if self.parameters['logML']: self.logger.open()
@@ -142,7 +144,7 @@ class ML():
         if trainParam['normalize']:
             scaler_dict = {}
             for col in self.dataset.columns:
-                if col in ['Name','bandgap']: continue
+                if col in trainParam['non-feature_col']:continue
                 scaler_dict[col]=MinMaxScaler()
                 # if col not in ["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap']: dfAll[col]=np.log10(dfAll[col])
                 dfAll[col]=scaler_dict[col].fit_transform(dfAll[col].values.reshape(-1,1))
@@ -151,12 +153,19 @@ class ML():
         self.dfAllnorm=dfAll.copy(deep=True)
         self.logTrain[trainKey]['scaler']=scaler_dict
         #   Prepare Dataset for training
-        if  trainParam['bandgap'] == 'upper': dfAll = dfAll.loc[dfAll['bandgap']==1]
-        if  trainParam['bandgap'] == 'lower': dfAll = dfAll.loc[dfAll['bandgap']==0]
+        specify="" if 'bandgap' in trainParam['non-feature_col'] else "_"+targetCol.rsplit('_',1)[-1]
+        if  trainParam['bandgap'] == 'upper': dfAll = dfAll.loc[dfAll['bandgap'+specify]==1]
+        if  trainParam['bandgap'] == 'lower': dfAll = dfAll.loc[dfAll['bandgap'+specify]==0]
         dfTrain, dfVal = train_test_split(dfAll, test_size=trainParam['validation_fraction'],random_state=trainParam['random_seed'])
-        xTrain = dfTrain.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
+        # xTrain = dfTrain.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
+        # xTrain = dfTrain.drop(["Name","Et_eV_1","Sn_cm2_1","Sp_cm2_1",'k_1','logSn_1','logSp_1','logk_1','bandgap_1',"Et_eV_2","Sn_cm2_2","Sp_cm2_2",'k_2','logSn_2','logSp_2','logk_2','bandgap_2'],axis =1)
+        # xTrain = dfTrain.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap','CMn','CPn','CMp','CPp'],axis =1)
+        xTrain = dfTrain.drop(trainParam['non-feature_col'],axis =1)
+        xVal = dfVal.drop(trainParam['non-feature_col'],axis =1)
+        # xVal = dfVal.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
+        # xVal = dfVal.drop(["Name","Et_eV_1","Sn_cm2_1","Sp_cm2_1",'k_1','logSn_1','logSp_1','logk_1','bandgap_1',"Et_eV_2","Sn_cm2_2","Sp_cm2_2",'k_2','logSn_2','logSp_2','logk_2','bandgap_2'],axis =1)
+        # xVal = dfVal.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap','CMn','CPn','CMp','CPp'],axis =1)
         yTrain = dfTrain[targetCol]
-        xVal = dfVal.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
         yVal = dfVal[targetCol]
 
         #   Train model
@@ -175,11 +184,11 @@ class ML():
         actVal = yVal
         predVal = model.predict(xVal)
 
-        if trainParam['normalize']:
-            actTrain = scaler_dict[targetCol].inverse_transform(actTrain.values.reshape(-1, 1))
-            predTrain = scaler_dict[targetCol].inverse_transform(predTrain.reshape(-1, 1))
-            actVal = scaler_dict[targetCol].inverse_transform(actVal.values.reshape(-1, 1))
-            predVal = scaler_dict[targetCol].inverse_transform(predVal.reshape(-1, 1))
+        # if trainParam['normalize']:
+        #     actTrain = scaler_dict[targetCol].inverse_transform(actTrain.values.reshape(-1, 1))
+        #     predTrain = scaler_dict[targetCol].inverse_transform(predTrain.reshape(-1, 1))
+        #     actVal = scaler_dict[targetCol].inverse_transform(actVal.values.reshape(-1, 1))
+        #     predVal = scaler_dict[targetCol].inverse_transform(predVal.reshape(-1, 1))
 
         self.logTrain[trainKey]['results'] = {
             "training_time": "{:.2f} s".format(training_end_time-training_start_time),
@@ -196,11 +205,7 @@ class ML():
         if self.parameters['logML']: self.logger.close()
 
         #   Save validation data
-        dfVal_output = dfVal.copy(deep=True)
-        if trainParam['normalize']:
-            for col in dfVal.columns:
-                if col in ['Name','bandgap']: continue
-                dfVal_output[col]=scaler_dict[col].inverse_transform(dfVal[col].values.reshape(-1,1))
+        dfVal_output = dfVal[trainParam['non-feature_col']].copy(deep=True)
         dfVal_output['actual'] = actVal
         dfVal_output['predicted'] = predVal
         self.logTrain[trainKey]['validation_data']= dfVal_output
@@ -219,29 +224,34 @@ class ML():
         trainParam={
             'validation_fraction': 0.01,    # validation dataset percentage
             'normalize': True,     # Wether or not to normalize the input data (Must be True for NN)
-            'base_model': MLPClassifier((100,100),alpha=0.001, activation = 'relu', learning_rate='adaptive', verbose=0),
+            'base_model': MLPClassifier((1024,128),alpha=0.001, activation = 'relu', learning_rate='adaptive', verbose=1),
             'random_seed': np.random.randint(1000),
             'bandgap': 'all', #or 'upper' == Et>0 or 'lower' ==Et<0
+            'non-feature_col':["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap','CMn','CPn','CMp','CPp'],
+            #["Name","Et_eV_1","Sn_cm2_1","Sp_cm2_1",'k_1','logSn_1','logSp_1','logk_1','bandgap_1',"Et_eV_2","Sn_cm2_2","Sp_cm2_2",'k_2','logSn_2','logSp_2','logk_2','bandgap_2']
             }
         if trainParameters!=None:
             for key in trainParameters.keys(): trainParam[key]=trainParameters[key]
         if trainParam['bandgap'] not in ['all','upper','lower']: raise ValueError('bandgap parameter must be all, lower or upper')
         trainKey = targetCol+"_"+trainParam['bandgap']
+        dfAll =  self.dataset.copy(deep=True)
+
+        nClass=dfAll[targetCol].nunique()
         self.logTrain[trainKey]={
             'target_col':targetCol,
             'prediction_type': 'classification',
             'train_parameters':trainParam,
+            'number_class':nClass,
         }
 
-        dfAll =  self.dataset.copy(deep=True)
         for col in self.dataset.columns:
-            if col not in ["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap']: dfAll[col]=np.log10(dfAll[col])
+            if col not in trainParam['non-feature_col']: dfAll[col]=np.log10(dfAll[col])
 
         #   Normalize dataset
         if trainParam['normalize']:
             scaler_dict = {}
             for col in self.dataset.columns:
-                if col in ['Name','bandgap']: continue
+                if col in trainParam['non-feature_col']: continue
                 scaler_dict[col]=MinMaxScaler()
                 dfAll[col]=scaler_dict[col].fit_transform(dfAll[col].values.reshape(-1,1))
         else:
@@ -258,10 +268,16 @@ class ML():
 
         #   Prepare Dataset for training
         dfTrain, dfVal = train_test_split(dfAll, test_size=trainParam['validation_fraction'],random_state=trainParam['random_seed'])
-        xTrain = dfTrain.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
-        yTrain = dfTrain[targetCol]
-        xVal = dfVal.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
+        xTrain = dfTrain.drop(trainParam['non-feature_col'],axis =1)
+        xVal = dfVal.drop(trainParam['non-feature_col'],axis =1)
+        # xTrain = dfTrain.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
+        # xTrain = dfTrain.drop(["Name",'type',"Et_eV_1","Sn_cm2_1","Sp_cm2_1",'k_1','logSn_1','logSp_1','logk_1','bandgap_1',"Et_eV_2","Sn_cm2_2","Sp_cm2_2",'k_2','logSn_2','logSp_2','logk_2','bandgap_2'],axis =1)
+        # xTrain = dfTrain.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap','CMn','CPn','CMp','CPp'],axis =1)
+        # xVal = dfVal.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap'],axis =1)
+        # xVal = dfVal.drop(['Name','type',"Et_eV_1","Sn_cm2_1","Sp_cm2_1",'k_1','logSn_1','logSp_1','logk_1','bandgap_1',"Et_eV_2","Sn_cm2_2","Sp_cm2_2",'k_2','logSn_2','logSp_2','logk_2','bandgap_2'],axis =1)
+        # xVal = dfVal.drop(["Name","Et_eV","Sn_cm2","Sp_cm2",'k','logSn','logSp','logk','bandgap','CMn','CPn','CMp','CPp'],axis =1)
         yVal = dfVal[targetCol]
+        yTrain = dfTrain[targetCol]
 
         #   Train model
         if self.parameters['logML']: self.logger.open()
@@ -279,25 +295,49 @@ class ML():
         actVal = yVal
         predVal = model.predict(xVal)
         probaVal = model.predict_proba(xVal)
+        if nClass==2:
+            self.logTrain[trainKey]['results'] = {
+                "training_time": "{:.2f} s".format(training_end_time-training_start_time),
+                "training_logloss": "{:.2e}".format(log_loss(actTrain,predTrain)),
+                "validation_logloss": "{:.2e}".format(log_loss(actVal,predVal)),
+                "training_accuracy":"{:.3f}".format(accuracy_score(actTrain,predTrain)),
+                "validation_accuracy":"{:.3f}".format(accuracy_score(actVal,predVal)),
+                "training_f1score":"{:.3f}".format(f1_score(actTrain,predTrain)),
+                "validation_f1score":"{:.3f}".format(f1_score(actVal,predVal)),
+                "training_precision":"{:.3f}".format(precision_score(actTrain,predTrain)),
+                "validation_precision":"{:.3f}".format(precision_score(actVal,predVal)),
+                "training_recall":"{:.3f}".format(recall_score(actTrain,predTrain)),
+                "validation_recall":"{:.3f}".format(recall_score(actVal,predVal)),
+            }
+        #  <subcell>
+        if nClass>2:
+            self.logTrain[trainKey]['results'] = {
+                "Total training time (s)": "{:.2f}".format(training_end_time-training_start_time),
+                "Training Weighted Accuracy": "{:.3f}".format(accuracy_score(actTrain,predTrain)),
+                "Training Weighted F1-score": "{:.3f}".format(f1_score(actTrain,predTrain,average='weighted')),
+                "Training Weighted Precision": "{:.3f}".format(precision_score(actTrain,predTrain,average='weighted')),
+                "Training Weighted Recall": "{:.3f}".format(recall_score(actTrain,predTrain,average='weighted')),
+                "Validation Weighted Accuracy": "{:.3f}".format(accuracy_score(actVal,predVal)),
+                "Validation Weighted F1-score": "{:.3f}".format(f1_score(actVal,predVal,average='weighted')),
+                "Validation Weighted Precision": "{:.3f}".format(precision_score(actVal,predVal,average='weighted')),
+                "Validation Weighted Recall": "{:.3f}".format(recall_score(actVal,predVal,average='weighted')),
+            }
+            #   Compute score per label
+            for i,s in zip(range(nClass),recall_score(actVal,predVal,average=None)):
+                self.logTrain[trainKey]['results']["Validation Recall - class "+str(i)]="{:.3f}".format(s)
+            for i,s in zip(range(nClass),precision_score(actVal,predVal,average=None)):
+                self.logTrain[trainKey]['results']["Validation Precision - class "+str(i)]="{:.3f}".format(s)
+            for i,s in zip(range(nClass),f1_score(actVal,predVal,average=None)):
+                self.logTrain[trainKey]['results']["Validation F1-score - class "+str(i)]="{:.3f}".format(s)
 
-        self.logTrain[trainKey]['results'] = {
-            "training_time": "{:.2f} s".format(training_end_time-training_start_time),
-            "training_logloss": "{:.2e}".format(log_loss(actTrain,predTrain)),
-            "validation_logloss": "{:.2e}".format(log_loss(actVal,predVal)),
-            "training_accuracy":"{:.3f}".format(accuracy_score(actTrain,predTrain)),
-            "validation_accuracy":"{:.3f}".format(accuracy_score(actVal,predVal)),
-            "training_f1score":"{:.3f}".format(f1_score(actTrain,predTrain)),
-            "validation_f1score":"{:.3f}".format(f1_score(actVal,predVal)),
-            "training_precision":"{:.3f}".format(precision_score(actTrain,predTrain)),
-            "validation_precision":"{:.3f}".format(precision_score(actVal,predVal)),
-            "training_recall":"{:.3f}".format(recall_score(actTrain,predTrain)),
-            "validation_recall":"{:.3f}".format(recall_score(actVal,predVal)),
-        }
+
+
+        #  </subcell>
         CM_labels = sorted(self.dataset[targetCol].unique())
         ind = ['Pred_'+str(c) for c in CM_labels]
         col = ['Act_'+str(c) for c in CM_labels]
         self.logTrain[trainKey]['classification_report'] = classification_report(actVal,predVal, digits=3)
-        self.logTrain[trainKey]['confusion_matrix'] = pd.DataFrame(confusion_matrix(actVal,predVal),columns=col,index=ind).transpose()
+        self.logTrain[trainKey]['confusion_matrix'] = pd.DataFrame(confusion_matrix(actVal,predVal),columns=col,index=ind)
         #   Log results
         if self.parameters['logML']: self.logger.open()
         Logger.printTitle('RESULTS',titleLen=40)
@@ -309,11 +349,7 @@ class ML():
         if self.parameters['logML']: self.logger.close()
 
         #   Save validation data
-        dfVal_output = dfVal.copy(deep=True)
-        if trainParam['normalize']:
-            for col in dfVal.columns:
-                if col in ['Name','bandgap']: continue
-                dfVal_output[col]=scaler_dict[col].inverse_transform(dfVal[col].values.reshape(-1,1))
+        dfVal_output = dfVal[trainParam['non-feature_col']].copy(deep=True)
         dfVal_output['actual'] = actVal
         dfVal_output['predicted'] = predVal
         dfVal_output['predicted_proba'] = [np.max(proba) for proba in probaVal]
