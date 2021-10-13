@@ -23,7 +23,7 @@ Related work:
 
 4/ Open a command terminal and type : pip install DPML
 
-This sill install all the other packages needed:
+Or download folder and install the following package:
   * numpy
   * pandas
   * matplotlib
