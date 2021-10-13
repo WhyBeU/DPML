@@ -33,7 +33,7 @@ import numpy as np
 
 # %%--  Inputs
 SAVEDIR = "savedir_example\\"
-FILEPATH = "example\\sample.csv"
+FILEPATH = "example\\data\\sample.csv"
 TEMPERATURE = [227.3,251.8,275.8,301.4,320.5,344.3,367.9,391.3]
 DOPING = [5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15,5.1e15]
 WAFERTYPE = 'n'
@@ -49,6 +49,7 @@ PARAMETERS = {
     'dn_range' : np.logspace(13,17,100),# Number of points to interpolate the curves on
     'classification_training_keys': ['bandgap_all'], # for k prediction
     'regression_training_keys': ['Et_eV_upper','Et_eV_lower','logk_all'], # for k prediction
+    'non-feature_col':['Name', 'Et_eV', 'Sn_cm2', 'Sp_cm2', 'k', 'logSn', 'logSp', 'logk', 'bandgap'] # columns to remove from dataframe in ML training
 }
 # %%-
 
@@ -61,40 +62,26 @@ exp.loadCSV(FilePath=FILEPATH,Temperature=TEMPERATURE,Doping=DOPING, Type=WAFERT
 exp.interpolateSRH()
 exp.plotSRH()
 exp.generateDB()
-# exp.saveExp()
 # %%-
 
 # %%--  Train machine learning algorithms
-# exp = Experiment.loadExp(SAVEDIR+"objects\\")
 ml = exp.newML()
 for trainKey in exp.parameters['regression_training_keys']:
     targetCol, bandgapParam = trainKey.rsplit('_',1)
-    ml.trainRegressor(targetCol=targetCol, trainParameters={'bandgap':bandgapParam})
+    param={'bandgap':bandgapParam,'non-feature_col':PARAMETERS['non-feature_col']}
+    ml.trainRegressor(targetCol=targetCol, trainParameters=param)
 for trainKey in exp.parameters['classification_training_keys']:
     targetCol, bandgapParam = trainKey.rsplit('_',1)
-    ml.trainClassifier(targetCol=targetCol, trainParameters={'bandgap':bandgapParam})
+    param={'bandgap':bandgapParam,'non-feature_col':PARAMETERS['non-feature_col']}
+    ml.trainClassifier(targetCol=targetCol, trainParameters=param)
 for trainKey in exp.parameters['regression_training_keys']: ml.plotRegressor(trainKey, plotParameters={'scatter_c':'black'})
-# ml.saveML()
-# exp.saveExp()
 # %%-
 
 # %%--  Make ML predictions
-# exp = Experiment.loadExp(SAVEDIR+"objects\\")
-exp.predictML()
-# exp.saveExp()
+exp.predictML(header=PARAMETERS['non-feature_col'])
 # %%-
 
 # %%--  Export data
-# exp = Experiment.loadExp(SAVEDIR+"objects\\")
-# ml = exp.loadML()
 exp.exportDataset()
 exp.exportValidationset()
-# exp.saveExp()
-# %%-
-
-# %%--  Reload specific experiment
-# expRef = Experiment.loadExp(SAVEDIR+"objects\\", filename='experimentObj_Example github_2020-03-12-15-14-50')
-# exp = Experiment(SaveDir=SAVEDIR, Parameters=PARAMETERS)
-# for key,value in expRef.__dict__.items():
-#     exp.__dict__[key]= value
 # %%-

@@ -201,7 +201,7 @@ class Experiment():
                 targetCol, bandgapParam = trainKey.rsplit('_',1)
                 if mlDic['train_parameters']['normalize']:
                     #   scale the feature vector
-                    if len(vector) != len(mlDic['scaler'])-len(header): raise ValueError('Feature vector is not the same size as the trained ML')
+                    if len(vector) != len(mlDic['scaler']): raise ValueError('Feature vector is not the same size as the trained ML')
                     i=0
                     for scaler_key,scaler_value in mlDic['scaler'].items():
                         if scaler_key in header: continue
@@ -210,7 +210,8 @@ class Experiment():
                         i+=1
                 #   Call ML model and predict on sample data
                 if mlDic['prediction_type'] == 'regression':
-                    if mlDic['train_parameters']['normalize']:  self.predictCsv[mlID][trainKey] = mlDic['scaler'][targetCol].inverse_transform([mlDic['model'].predict([vector])])[0][0]
+                    self.predictCsv[mlID][trainKey] = mlDic['model'].predict([vector])[0]
+                    # if mlDic['train_parameters']['normalize']:  self.predictCsv[mlID][trainKey] = mlDic['scaler'][targetCol].inverse_transform([mlDic['model'].predict([vector])])[0][0]
                 if mlDic['prediction_type'] == 'classification':
                     self.predictCsv[mlID][trainKey] = (mlDic['model'].predict([vector])[0],mlDic['model'].predict_proba([vector])[0])
 
