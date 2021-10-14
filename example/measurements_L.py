@@ -1,0 +1,87 @@
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#---    Initialization
+#///////////////////////////////////////////
+# %%--  Imports
+from DPML.si import *
+from DPML.main import *
+from DPML.utils import *
+import numpy as np
+# %%-
+
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#---    Setup
+#///////////////////////////////////////////
+# %%--  Instructions:
+'''
+---Main Steps---
+    1/  Choose SAVEDIR folder where to save the output files from DPML. (Use absolute path)
+    2/  Choose FILEPATH of measurements. Check the sample.csv file for correct formatting.
+        Each pair of columns needs to match the elements of TEMPERATURE and DOPING in order.
+    3/  Provide TEMPERATURE as a list of the temperature in Kelvin for each measurements
+    4/  Provide DOPING as a list of the temperature in cm-3 for each measurements
+    5/  Provide cell type 'n' or 'p'
+    6/  NAME your experiment
+
+---Other notes---
+    Change hyper-parameters as desired.
+    There are hidden parameters that can be specified in most functions, they
+    use by the default the class-defined parameters
+    Not executing the functions in the correct order can results in errors.
+    Comment or uncomment load and save point as required.
+'''
+# %%-
+
+# %%--  Inputs
+SAVEDIR = "savedir_example\\"
+FILEPATH = "example\\data\\sample_L.csv"
+TEMPERATURE = [158,182,206,230,254,278,300]
+DOPING = [1.01e16]*len(TEMPERATURE)
+WAFERTYPE = 'p'
+NAME = 'Example_L'
+# %%-
+
+# %%--  Hyper-parameters
+PARAMETERS = {
+    'name': NAME,
+    'save': False,   # True to save a copy of the printed log, the outputed model and data
+    'logML':True,   #   Log the output of the console to a text file
+    'n_defects': 100000, # Size of simulated defect data set for machine learning
+    'dn_range' : np.logspace(13,17,100),# Number of points to interpolate the curves on
+    'classification_training_keys': ['bandgap_all'], # for k prediction
+    'regression_training_keys': ['Et_eV_upper','Et_eV_lower','logk_all'], # for k prediction
+    'non-feature_col':['Name', 'Et_eV', 'Sn_cm2', 'Sp_cm2', 'k', 'logSn', 'logSp', 'logk', 'bandgap'] # columns to remove from dataframe in ML training
+}
+# %%-
+
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#---    Script
+#///////////////////////////////////////////
+# %%--  Define experiment and generate defect database
+exp = Experiment(SaveDir=SAVEDIR, Parameters=PARAMETERS)
+exp.loadCSV(FilePath=FILEPATH,Temperature=TEMPERATURE,Doping=DOPING, Type=WAFERTYPE)
+exp.interpolateSRH()
+exp.plotSRH()
+exp.generateDB()
+# %%-
+
+# %%--  Train machine learning algorithms
+ml = exp.newML()
+for trainKey in exp.parameters['regression_training_keys']:
+    targetCol, bandgapParam = trainKey.rsplit('_',1)
+    param={'bandgap':bandgapParam,'non-feature_col':PARAMETERS['non-feature_col']}
+    ml.trainRegressor(targetCol=targetCol, trainParameters=param)
+    ml.plotRegressor(trainKey, plotParameters={'scatter_c':'black'})
+for trainKey in exp.parameters['classification_training_keys']:
+    targetCol, bandgapParam = trainKey.rsplit('_',1)
+    param={'bandgap':bandgapParam,'non-feature_col':PARAMETERS['non-feature_col']}
+    ml.trainClassifier(targetCol=targetCol, trainParameters=param)
+# %%-
+
+# %%--  Make ML predictions
+exp.predictML(header=PARAMETERS['non-feature_col'])
+# %%-
+
+# %%--  Export data
+exp.exportDataset()
+exp.exportValidationset()
+# %%-
