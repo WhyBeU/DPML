@@ -287,12 +287,18 @@ class Experiment():
         ltsDF = pd.DataFrame(ltsDB)
         ltsDF.columns = columns_name
         ltsID = self.updateLogDataset(ltsDF)
+        #   Log change
+        self.updateLogbook('lifetime_database_generated_ID'+ltsID)
         if self.parameters['save']:
             SaveObj(ltsDF,self.pathDic['objects'],'ltsDF_ID'+ltsID+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
             self.updateLogbook('lifetime_database_saved_ID'+ltsID)
 
-        #   Log change
-        self.updateLogbook('lifetime_database_generated_ID'+ltsID)
+    def uploadDB(self, ltsDF):
+        ltsID = self.updateLogDataset(ltsDF)
+        self.updateLogbook('lifetime_database_uploaded_ID'+ltsID)
+        if self.parameters['save']:
+            SaveObj(ltsDF,self.pathDic['objects'],'ltsDF_ID'+ltsID+"_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+            self.updateLogbook('lifetime_database_saved_ID'+ltsID)
     def interpolateSRH(self):
         '''
         ---Doc---
