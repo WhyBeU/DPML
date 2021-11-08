@@ -6,6 +6,17 @@ from DPML.si import *
 from DPML.main import *
 from DPML.utils import *
 import numpy as np
+import pandas as pd
+pd.options.mode.chained_assignment = None  # default='warn'
+
+#   For DPDL
+from DPDL import *
+import torch
+import copy
+import torch.nn as nn
+import torch.utils.data as Data
+from torchvision import datasets, models, transforms
+
 # %%-
 
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -45,7 +56,7 @@ PARAMETERS = {
     'name': NAME,
     'save': False,   # True to save a copy of the printed log, the outputed model and data
     'logML':True,   #   Log the output of the console to a text file
-    'n_defects': 2000, # Size of simulated defect data set for machine learning
+    'n_defects': 100000, # Size of simulated defect data set for machine learning
     'dn_range' : np.logspace(13,17,100),# Number of points to interpolate the curves on
     'classification_training_keys': ['bandgap_all'], # for k prediction
     'regression_training_keys': ['Et_eV_upper','Et_eV_lower','logk_all'], # for k prediction
@@ -84,4 +95,137 @@ exp.predictML(header=PARAMETERS['non-feature_col'])
 # %%--  Export data
 exp.exportDataset()
 exp.exportValidationset()
+# %%-
+
+# %%--  Train CNN for feature extraction
+#  <subcell>    Settings
+dataDf=exp.logDataset['0'].copy(deep=True)
+save=PARAMETERS['save']
+Ycol="bandgap"
+nb_classes=2
+subset_size = None
+batch_size = 17
+split_size = 0.1
+n_epochs = 50
+CM_fz = 12
+img_size = 64
+comment="SRH_bandgap_50epochs"
+transform_augment = transforms.Compose([
+    transforms.Resize((img_size,img_size)),
+    transforms.Grayscale(num_output_channels=1),
+    transforms.ToTensor(),
+    transforms.Normalize([0.5],[0.5])
+])
+transform = transforms.Compose([
+    transforms.Resize((img_size,img_size)),
+    transforms.Grayscale(num_output_channels=1),
+    transforms.ToTensor(),
+    transforms.Normalize([0.5],[0.5])
+])
+#  </subcell>
+CNN=dualCNN(nb_classes=nb_classes,input_size=img_size,input_channel=1,dropout_rate=0.2)
+dpdl = DPDL(SAVEDIR, CNN,name='DPDL_measurements_L',save=save)
+dpdl.subset_size = subset_size
+dpdl.batch_size = batch_size
+dpdl.split_size = split_size
+dpdl.n_epochs = n_epochs
+dpdl.CM_fz = CM_fz
+dpdl.non_feature_col = PARAMETERS['non-feature_col']
+dpdl.dn_len=len(PARAMETERS['dn_range'])
+dpdl.t_len=len(TEMPERATURE)
+dpdl.initTraining()
+dpdl.trainModel(df=dataDf,Ycol=Ycol,transform=transform,transformTrain=transform_augment,randomSeed=None,comment=comment)
+if dpdl.predictType=="Regression":
+    res=dpdl.regResults[0]
+    res['scaler']=dpdl.scaler
+else:
+    res=dpdl.classResults[0]
+    res['vocab'] = dpdl.vocab
+    res["CM"] = dpdl.CM
+res['tracefile']=dpdl.tracefile
+res['predictfile']=dpdl.predictfile
+res['model']=dpdl.model
+res['transform']=transform
+res['non_feature_col']=dpdl.non_feature_col
+# %%-
+
+# %%--  Feature extraction
+Ycol='bandgap'
+CNN.FC = nn.Sequential(nn.ReLU())
+CNN.cuda()
+CNN.eval()
+data=dataDf.copy(deep=True)
+Set = Dataset(data, Ycol, PARAMETERS['non-feature_col'], len(PARAMETERS['dn_range']), len(TEMPERATURE), transform)
+Loader = Data.DataLoader(Set,batch_size=39,shuffle=False,num_workers=0)
+print('Extract Set')
+p=0
+first=True
+for inputs, targets in Loader:
+    p+=1
+    print('Batch '+str(p)+' of '+str(len(Loader)))
+    inputs = inputs.cuda()
+    outputs = CNN(inputs)
+    outputs = outputs.cpu().detach().numpy().tolist()
+    if first==True:
+        first=False
+        l = len(outputs[0])
+        Xcols = []
+        extracted = {}
+        for j in range(l):
+            extracted['CNN_'+str(j)]=[]
+            Xcols.append('CNN_'+str(j))
+    inputs=inputs.cpu()
+    for k in range(len(outputs)):
+        for j in range(l):
+            extracted['CNN_'+str(j)].append(outputs[k][j])
+
+    del inputs, targets, outputs
+    torch.cuda.empty_cache()
+CNN.cpu()
+extracted_df=pd.DataFrame(extracted)
+for col in extracted_df.columns: extracted_df[col]=10**extracted_df[col].values
+for col in PARAMETERS['non-feature_col']: extracted_df[col]=data[col].values
+exp.uploadDB(extracted_df) # ID=1
+# %%-
+
+# %%--  Train machine learning algorithms
+ml = exp.newML(datasetID='1')
+for trainKey in exp.parameters['regression_training_keys']:
+    targetCol, bandgapParam = trainKey.rsplit('_',1)
+    param={'bandgap':bandgapParam,'non-feature_col':PARAMETERS['non-feature_col']}
+    ml.trainRegressor(targetCol=targetCol, trainParameters=param)
+    ml.plotRegressor(trainKey, plotParameters={'scatter_c':'black'})
+for trainKey in exp.parameters['classification_training_keys']:
+    targetCol, bandgapParam = trainKey.rsplit('_',1)
+    param={'bandgap':bandgapParam,'non-feature_col':PARAMETERS['non-feature_col']}
+    ml.trainClassifier(targetCol=targetCol, trainParameters=param)
+# %%-
+
+# %%--  Predict
+header=PARAMETERS['non-feature_col']
+predictCsv = {}
+vector = [t for key in exp.expKeys for t in exp.expDic[key]['tau_interp']]
+extracted_vector = CNN(transform(Set.row_to_img(pd.Series(vector))).unsqueeze(0)).squeeze(0).detach().numpy()
+for trainKey, mlDic in ml.logTrain.items():
+    if trainKey=='scaler': continue
+    targetCol, bandgapParam = trainKey.rsplit('_',1)
+    if mlDic['train_parameters']['normalize']:
+        #   scale the feature vector
+        if len(extracted_vector) != len(mlDic['scaler']): raise ValueError('Feature vector is not the same size as the trained ML')
+        i=0
+        for scaler_key,scaler_value in mlDic['scaler'].items():
+            if scaler_key in header: continue
+            extracted_vector[i]=scaler_value.transform(extracted_vector[i].reshape(-1,1))[0][0]
+            i+=1
+    #   Call ML model and predict on sample data
+    if mlDic['prediction_type'] == 'regression':
+        predictCsv[trainKey] = mlDic['model'].predict([extracted_vector])[0]
+        # if mlDic['train_parameters']['normalize']:  self.predictCsv[mlID][trainKey] = mlDic['scaler'][targetCol].inverse_transform([mlDic['model'].predict([vector])])[0][0]
+    if mlDic['prediction_type'] == 'classification':
+        predictCsv[trainKey] = (mlDic['model'].predict([extracted_vector])[0],mlDic['model'].predict_proba([extracted_vector])[0])
+
+#   Log in the trace
+Logger.printTitle(' ML PREDICTION',titleLen=60, newLine=False)
+Logger.printDic(predictCsv)
+exp.updateLogbook('prediction_made')
 # %%-
