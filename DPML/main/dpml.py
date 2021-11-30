@@ -171,7 +171,7 @@ class DPML():
                     if breakAuger: skipDefect=True
                 if skipDefect: continue
                 curves.append(s)
-                for t,dn in zip(s.tauSRH,s.dnrange):    # ADD NOISE HERE
+                for t,dn in zip(s.tauSRH_noise,s.dnrange):    # ADD NOISE HERE
                     col.append(t)
             firstPass = False
             if not skipDefect:
