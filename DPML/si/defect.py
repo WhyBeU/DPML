@@ -8,9 +8,9 @@ class Defect():
     Sminbound = 1E-20   #   Absolute minimum bound for Capture Cross Section
     Smaxbound = 1E-10   #   Absolute maximum bound for Capture Cross Section
     DefaultNt = 1E12    #   Default value for Defect density if none is provided
-    MPE_Einf_min = 0    #   Minimum value for Multiphonon emission activation energy [Rein]
-    MPE_Einf_max = 0.56 #   Maximum value for Multiphonon emission activation energy [Rein]
-    CAS_Alpha_min = 1    #   Minimum value for Cascade power law [Rein]
+    MPE_Einf_min = 0.01    # 0.00  Minimum value for Multiphonon emission activation energy [Rein]
+    MPE_Einf_max = 0.25 #   0.056 -Maximum value for Multiphonon emission activation energy [Rein]
+    CAS_Alpha_min = 1.1    #   Minimum value for Cascade power law [Rein]
     CAS_Alpha_max = 4    #   Maximum value for Cascade power law [Rein]
     Capture_modes = ['Radiative','Multiphonon emission','Cascade']
     DefaultCM = ['Radiative']
