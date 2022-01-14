@@ -21,9 +21,7 @@ Related work:
 
 3/ Move the semiconductor package in your Python\Python3X\Lib\site-packages\ (where you installed python)
 
-4/ Open a command terminal and type : pip install DPML
-
-Or download folder and install the following package:
+4/ Download Github Repo folder and install the following package:
   * numpy
   * pandas
   * matplotlib
